@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Search for a Movie or Series</h1>
+<form method="POST" action="{{ url_for('main.search') }}">
+    <div class="mb-3">
+        <label for="query" class="form-label">Title</label>
+        <input type="text" class="form-control" id="query" name="query" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Search</button>
+</form>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Search Results for "{{ query }}"</h1>
+<div class="list-group">
+    {% for result in results %}
+    <div class="list-group-item list-group-item-action bg-dark text-white mb-3">
+        <div class="row align-items-center">
+            <div class="col-md-2">
+                {% if result.poster_url %}
+                <img src="{{ result.poster_url }}" class="img-fluid rounded">
+                {% else %}
+                <div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="height: 150px;">No Image</div>
+                {% endif %}
+            </div>
+            <div class="col-md-7">
+                <a href="{{ url_for('main.item_detail', item_type=result.type, item_id=result.id) }}">
+                    <h5 class="mb-1">{{ result.title }} ({{ result.year }})</h5>
+                </a>
+                <p class="mb-1 text-muted">
+                    {% if result.status == 'watched' %}
+                        <span class="badge bg-success">Watched</span>
+                    {% elif result.status == 'planned' %}
+                        <span class="badge bg-info">Planned</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-3 text-end">
+                {% if result.add_to_plan_url %}
+                    <form method="POST" action="{{ result.add_to_plan_url }}" class="d-inline">
+                        <input type="hidden" name="action" value="plan">
+                        <button type="submit" class="btn btn-primary">Plan to Watch</button>
+                    </form>
+                {% endif %}
+                 <a href="{{ url_for('main.item_detail', item_type=result.type, item_id=result.id) }}" class="btn btn-secondary">Details</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p>No results found.</p>
+    {% endfor %}
+</div>
+{% endblock %}

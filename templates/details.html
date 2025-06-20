@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <img src="{{ item.poster_url }}" class="img-fluid rounded shadow mb-3" alt="Poster for {{ item.title }}">
+        {# Removed the embedded iframe here as a button is requested in the main action area #}
+    </div>
+
+    <div class="col-md-8">
+        <a href="{{ origin or url_for('main.index') }}" class="btn btn-outline-light btn-sm mb-3">‹ Back</a>
+
+        {# New action button group #}
+        <div class="d-flex flex-wrap my-3 align-items-center">
+            {% if item.trailer_key %}
+            <a href="https://www.youtube.com/watch?v={{ item.trailer_key }}" target="_blank" class="btn btn-dark me-2 mb-2">
+                <i class="bi bi-play-circle-fill"></i> Watch Trailer
+            </a>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=request.path) }}" class="me-2 mb-2">
+                <input type="hidden" name="action" value="{{ 'remove_plan' if is_planned else 'plan' }}">
+                <button type="submit" class="btn btn-secondary">
+                    <i class="bi {{ 'bi-heart-fill' if is_planned else 'bi-heart' }}"></i> {{ 'Planned' if is_planned else 'Plan to Watch' }}
+                </button>
+            </form>
+
+            {% if is_watched or is_planned %}
+            <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title) }}" onsubmit="return confirm('Are you sure you want to delete ALL records for this item?');" class="mb-2">
+                <input type="hidden" name="action" value="delete_all">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash-fill"></i> Delete All Records
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {# End new action button group #}
+
+        <h1 class="mb-1">{{ item.title }} <span class="text-muted fw-light">({{ item.year }})</span></h1>
+        <p class="text-muted">{{ item.genre }} | {{ item.runtime|format_runtime }}</p>
+
+        <h5>Plott</h5>
+        <p>{{ item.plot }}</p>
+
+        {% if item.type == 'movie' %}
+            {% if is_watched %}
+                <h5 class="mt-4">My Watch History ({{ watch_history|length }})</h5>
+                {% for watch in watch_history %}
+                <div class="card bg-dark my-2">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Watched on:</strong> {{ watch.watched_on }} |
+                            <strong>Rating:</strong>
+                            <span class="rating-stars">
+                            {% for i in range(1, 6) %}<i class="bi {{ 'bi-star-fill' if i <= watch.rating else 'bi-star' }}"></i>{% endfor %}
+                            </span>
+                        </div>
+                        <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}">
+                             <input type="hidden" name="action" value="delete_watch_instance">
+                             <input type="hidden" name="watch_id" value="{{ watch.watch_id }}">
+                             <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this watch record?');">Delete</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+            <div class="card bg-dark my-3">
+                 <div class="card-body">
+                    <h5 class="card-title">Add New Watch Record</h5>
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title) }}">
+                        <input type="hidden" name="action" value="watch">
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Rating</label>
+                                <select name="rating" class="form-select" required>
+                                    <option value="5">★★★★★</option> <option value="4">★★★★☆</option> <option value="3">★★★☆☆</option> <option value="2">★★☆☆☆</option> <option value="1">★☆☆☆☆</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                 <label class="form-label">Watched On</label>
+                                <input type="date" name="watched_on" class="form-control" value="{{ today }}" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">Save Watch Record</button>
+                    </form>
+                </div>
+            </div>
+        {% else %} {# Series logic #}
+            {% if is_watched %}
+                <h5 class="mt-4">My Rating</h5>
+                <form class="row g-3 align-items-center" method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title) }}">
+                    <input type="hidden" name="action" value="rate_series">
+                    <div class="col-auto">
+                        <select name="rating" class="form-select">
+                            {% for i in [5,4,3,2,1] %}
+                            <option value="{{i}}" {% if watched_series_data and i == watched_series_data.rating %}selected{% endif %}>{{'★'*i}}{{ '☆'*(5-i) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-auto"><button type="submit" class="btn btn-primary">Rate</button></div>
+                </form>
+            {% endif %}
+
+            <h5 class="mt-4">Episodes</h5>
+            <div id="seasons-accordion">
+            {% for season in item.seasons %}
+                {% if season.episode_count > 0 %}
+                <div class="card bg-dark mb-2">
+                    <div class="card-header" id="heading-s{{season.season_number}}">
+                        <h2 class="mb-0">
+                        <button class="btn btn-link text-white" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-s{{season.season_number}}">
+                            {{ season.name }}
+                        </button>
+                        </h2>
+                    </div>
+                    <div id="collapse-s{{season.season_number}}" class="collapse show" data-bs-parent="#seasons-accordion">
+                        <div class="card-body">
+                            {% for episode in season.episodes %}
+                            <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}">
+                                <input type="hidden" name="action" value="toggle_episode">
+                                <input type="hidden" name="episode_id" value="{{ episode.id }}">
+                                <input type="hidden" name="watched_on" value="{{ today }}">
+                                <div class="form-check">
+                                  <input class="form-check-input" type="checkbox" value="" id="ep-{{episode.id}}" onchange="this.form.submit()" {% if episode.id in watched_episode_ids %}checked{% endif %}>
+                                  <label class="form-check-label" for="ep-{{episode.id}}">
+                                    <strong>E{{ episode.episode_number }}:</strong> {{ episode.name }}
+                                  </label>
+                                </div>
+                            </form>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Removed the old delete all form from here #}
+    </div>
+</div>
+
+{% if item.recommendations %}
+<div class="row mt-5">
+    <h3 class="mb-3">Recommendations</h3>
+    <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4">
+    {% for rec in item.recommendations %}
+        <div class="col">
+            <a href="{{ url_for('main.item_detail', item_type=rec.type, item_id=rec.id) }}">
+                <div class="card h-100">
+                    <img src="{{ rec.poster_url }}" class="card-img-top" alt="{{ rec.title }}">
+                    <div class="card-body p-2">
+                        <h6 class="card-title m-0 text-truncate">{{ rec.title }}</h6>
+                        <small class="text-muted">{{ rec.year }}</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+    {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
