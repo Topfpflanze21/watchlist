@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="text-center">
+    <h1 class="text-4xl md:text-5xl font-extrabold mb-4">Welcome to Your Watchlist</h1>
+    <p class="text-lg text-gray-400 mb-12">Select a category to view your collection or use the search bar to add something new.</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <a href="{{ url_for('main.movies') }}" class="card p-10 rounded-lg text-center transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl hover:border-blue-500">
+            <h2 class="text-3xl font-bold text-blue-400">Movies Collection</h2>
+            <p class="mt-2 text-gray-400">View your 'Plan to Watch' and 'Watched' movies.</p>
+        </a>
+        <a href="{{ url_for('main.series') }}" class="card p-10 rounded-lg text-center transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl hover:border-purple-500">
+            <h2 class="text-3xl font-bold text-purple-400">Series Collection</h2>
+            <p class="mt-2 text-gray-400">Track your watched episodes and series progress.</p>
+        </a>
+    </div>
+</div>
+
+<div class="mt-20 text-left">
+    <div class="flex flex-wrap items-end justify-between border-b-2 border-gray-700 pb-2 mb-8 gap-4">
+        <h2 class="text-3xl font-bold">From Your 'Plan to Watch' List</h2>
+        <div id="planned-tabs" class="flex-shrink-0 flex space-x-1 rounded-lg bg-gray-800 p-1">
+            <button class="tab-btn active" onclick="showTab('planned', 'movie', this)">Movies</button>
+            <button class="tab-btn" onclick="showTab('planned', 'series', this)">Series</button>
+        </div>
+    </div>
+    <div id="planned-movie-content" class="tab-content">
+        {% if planned_movie_suggestions %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {% for item in planned_movie_suggestions %}
+            <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
+                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}<p class="text-gray-400">No movie suggestions from your 'Plan to Watch' list.</p>{% endif %}
+    </div>
+    <div id="planned-series-content" class="tab-content" style="display: none;">
+        {% if planned_series_suggestions %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {% for item in planned_series_suggestions %}
+            <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
+                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}<p class="text-gray-400">No series suggestions from your 'Plan to Watch' list.</p>{% endif %}
+    </div>
+</div>
+
+<div class="mt-20 text-left">
+    <div class="flex flex-wrap items-end justify-between border-b-2 border-gray-700 pb-2 mb-8 gap-4">
+        <h2 class="text-3xl font-bold">You Might Like These</h2>
+        <div id="smart-tabs" class="flex-shrink-0 flex space-x-1 rounded-lg bg-gray-800 p-1">
+            <button class="tab-btn active" onclick="showTab('smart', 'movie', this)">Movies</button>
+            <button class="tab-btn" onclick="showTab('smart', 'series', this)">Series</button>
+        </div>
+    </div>
+    <div id="smart-movie-content" class="tab-content">
+        {% if smart_movie_suggestions %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {% for item in smart_movie_suggestions %}
+            <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
+                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}<p class="text-gray-400">Watch some movies to get personalized suggestions!</p>{% endif %}
+    </div>
+    <div id="smart-series-content" class="tab-content" style="display: none;">
+        {% if smart_series_suggestions %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {% for item in smart_series_suggestions %}
+            <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
+                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}<p class="text-gray-400">Watch some series to get personalized suggestions!</p>{% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-6">
+    <a href="{{ origin or url_for('main.' ~ internal_type) }}" class="inline-flex items-center text-gray-400 hover:text-white transition-colors group">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 h-5 w-5 transform group-hover:-translate-x-1 transition-transform"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back to {{ internal_type|capitalize }}
+    </a>
+</div>
+<div class="card rounded-lg overflow-hidden">
+    <div class="md:flex">
+        <div class="md:w-2/5 md:max-w-sm flex-shrink-0 bg-gray-800 p-6 flex flex-col">
+            <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" class="w-full h-auto object-cover rounded-md shadow-lg" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';">
+        </div>
+
+        <div class="p-6 md:p-8 flex flex-col flex-grow">
+            <div class="flex justify-between items-start gap-4">
+                <h2 class="text-4xl font-bold text-white flex-grow">{{ item.title }}</h2>
+
+                <div class="flex items-center flex-shrink-0 gap-x-2">
+                    {% if item.trailer_key %}
+                    <button id="open-trailer-modal" class="btn !bg-gray-700 hover:!bg-gray-600 flex items-center justify-center gap-2 !py-2 !px-3" title="Watch Trailer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        <span class="text-sm font-semibold">Trailer</span>
+                    </button>
+                    {% endif %}
+
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="flex">
+                        {% if is_planned %}
+                            <input type="hidden" name="action" value="remove_plan">
+                            <button type="submit" class="btn !bg-blue-600 hover:!bg-blue-500 flex-shrink-0 flex items-center !py-2 !px-3" title="In 'Plan to Watch'. Click to remove.">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                            </button>
+                        {% else %}
+                             <input type="hidden" name="action" value="plan">
+                             <button type="submit" class="btn !bg-gray-700 hover:!bg-gray-600 flex-shrink-0 flex items-center !py-2 !px-3" title="Add to 'Plan to Watch'">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                             </button>
+                        {% endif %}
+                    </form>
+
+                    {% if is_watched or is_planned %}
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="flex" onsubmit="return confirm('Are you sure you want to delete this item AND all its history? This action cannot be undone.');">
+                        <input type="hidden" name="action" value="delete_all">
+                        <button type="submit" class="btn btn-danger flex-shrink-0 flex items-center !py-2 !px-3" title="Delete all records for this item">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <p class="text-lg text-gray-400 my-2">
+                {{ item.year }}
+                {% if item.type == 'movie' and item.runtime %}• {{ item.runtime|format_runtime }}{% endif %}
+                {% if item.type == 'series' and item.number_of_seasons %}• {{ item.number_of_seasons }} Seasons{% endif %}
+                {% if item.type == 'series' and item.number_of_episodes %}({{ item.number_of_episodes }} Episodes){% endif %}
+                 • {{ item.genre }}
+            </p>
+
+            <div class="space-y-4 my-4">
+                <p><strong class="font-semibold text-gray-300">Main Actors:</strong> <span class="text-gray-400">{{ item.actors }}</span></p>
+                <p><strong class="font-semibold text-gray-300">Plot:</strong> <span class="text-gray-400 mt-1">{{ item.plot }}</span></p>
+            </div>
+
+            {% if item.watch_providers and item.watch_providers.flatrate %}
+            <div class="my-4">
+                <p class="font-semibold text-gray-300">Available to stream on:</p>
+                <a href="{{ item.watch_providers.link }}" target="_blank" rel="noopener noreferrer" class="block mt-2 p-3 bg-gray-800 rounded-lg hover:bg-gray-700 transition-colors" title="See all streaming options">
+                    <div class="flex items-center gap-4 flex-wrap">
+                        {% for provider in item.watch_providers.flatrate %}
+                            <img src="{{ provider.logo_url }}" alt="{{ provider.name }}" title="{{ provider.name }}" class="h-10 w-10 rounded-md object-cover">
+                        {% endfor %}
+                        <span class="text-sm text-gray-400 ml-auto flex-shrink-0 group-hover:text-white">View all options →</span>
+                    </div>
+                </a>
+            </div>
+            {% endif %}
+
+            {% if item.type == 'movie' %}
+                <div class="flex-grow flex flex-col mt-4">
+                    <div class="flex-grow">
+                    {% if watch_history %}
+                    <details class="space-y-4 mb-4" open>
+                        <summary class="text-xl font-bold text-white border-b border-gray-600 pb-2 flex items-center justify-between">Watch History</summary>
+                        <div class="pt-3 space-y-3">
+                            {% for watch in watch_history %}
+                            <div class="flex items-center justify-between gap-x-4 p-3 bg-gray-800 rounded-lg">
+                                <div class="flex items-center gap-x-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    <p class="text-sm text-gray-200">Watched on <strong class="font-semibold text-white">{{ watch.watched_on }}</strong></p>
+                                </div>
+                                <div class="flex items-center gap-x-4">
+                                    <div class="flex-shrink-0 rating-star">{{ '★' * watch.rating }}<span class="text-gray-600">{{ '★' * (5 - watch.rating) }}</span></div>
+                                    <form action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" method="POST" onsubmit="return confirm('Delete this watch record?');">
+                                        <input type="hidden" name="action" value="delete_watch_instance"><input type="hidden" name="watch_id" value="{{ watch.watch_id }}">
+                                        <button type="submit" title="Delete record" class="bg-red-800 hover:bg-red-700 text-white p-2 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41z"/></svg></button>
+                                    </form>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                    {% endif %}
+                    </div>
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="space-y-4 border-2 border-gray-600 rounded-lg p-4 bg-gray-800 mt-auto">
+                         <input type="hidden" name="action" value="watch">
+                        <h3 class="font-bold text-lg text-center text-white">{% if is_watched %}Add New Watch Record{% else %}I've Watched This{% endif %}</h3>
+                        <div><label for="watched_on" class="block text-sm font-medium text-gray-300 mb-1">Watched On</label><input type="date" name="watched_on" required value="{{ today }}" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 text-white" style="color-scheme: dark;"></div>
+                        <div><label class="block text-sm font-medium text-gray-300 mb-2">Your Rating</label><div class="bg-gray-700 rounded-lg p-2"><div class="rating-group">
+                            {% for i in range(5, 0, -1) %}<input type="radio" id="rating-{{ i }}" name="rating" value="{{ i }}" required><label for="rating-{{ i }}"><span class="star">★</span><span class="rating-number">{{ i }}</span></label>{% endfor %}
+                        </div></div></div>
+                        <button type="submit" class="w-full btn !py-2">{% if is_watched %}Add Watch Record{% else %}Add to 'Watched'{% endif %}</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if item.type == 'series' %}
+    <div class="p-4 md:p-6 border-t-2 border-gray-700">
+        <div class="flex items-start justify-between gap-4 mb-4">
+             <div class="flex-grow">
+                <h2 class="text-2xl font-bold">Episode Tracker</h2>
+                {% set watched_count = watched_episode_ids|length %}{% set total_count = item.total_episode_count %}
+                {% if total_count > 0 %}{% set progress_percent = (watched_count / total_count * 100)|round %}<div class="w-full bg-gray-700 rounded-full h-2.5 mt-2"><div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ progress_percent }}%"></div></div><p class="text-sm text-gray-400 mt-1">{{ watched_count }} of {{ total_count }} episodes watched.</p>{% endif %}
+            </div>
+            <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="space-y-2 border border-gray-600 rounded-lg p-2 bg-gray-800 flex-shrink-0">
+                <input type="hidden" name="action" value="rate_series"><h3 class="font-bold text-sm text-center text-white">Rate This Series</h3><div class="bg-gray-700 rounded-lg"><div class="rating-group !justify-around">
+                    {% set current_rating = watched_series_data.get('rating')|int if watched_series_data else 0 %}
+                    {% for i in range(5, 0, -1) %}<input type="radio" id="rating-{{ i }}" name="rating" value="{{ i }}" required {% if i == current_rating %}checked{% endif %} onchange="this.form.submit()"><label for="rating-{{ i }}" class="!p-1"><span class="star !text-xl">★</span></label>{% endfor %}
+                </div></div>
+            </form>
+        </div>
+        <div class="space-y-2 max-h-[60vh] overflow-y-auto pr-2 details-scroll">
+        {% for season in item.seasons %}{% if season.episodes %}{% set watched_in_season = season.episodes|selectattr('id', 'in', watched_episode_ids)|list %}<details class="bg-gray-800 rounded-lg" {% if season.season_number > 0 and (watched_in_season|length < season.episode_count or not watched_in_season) %}open{% endif %}><summary class="p-3 font-bold text-lg cursor-pointer flex justify-between items-center hover:bg-gray-700 rounded-t-lg transition-colors"><span>{{ season.name }} ({{ watched_in_season|length }} / {{ season.episode_count }})</span><span class="disclosure-arrow text-gray-400 text-2xl">▼</span></summary><div class="border-t border-gray-700 p-2 md:p-3 space-y-2">
+            {% for episode in season.episodes %}<div class="flex items-center justify-between rounded-md p-1.5 {% if episode.id in watched_episode_ids %}bg-green-900/40{% else %}bg-gray-900/30{% endif %}"><div class="flex items-center gap-x-3"><span class="text-gray-400 font-mono text-xs sm:text-sm w-16 text-center">S{{ "%02d"|format(season.season_number) }}E{{ "%02d"|format(episode.episode_number) }}</span><div class="flex-grow"><p class="font-semibold text-sm">{{ episode.name }}</p></div></div><form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="ml-2"><input type="hidden" name="action" value="toggle_episode"><input type="hidden" name="episode_id" value="{{ episode.id }}"><input type="hidden" name="watched_on" value="{{ today }}"><button type="submit" class="btn !py-1 !px-2 text-xs whitespace-nowrap {% if episode.id in watched_episode_ids %}!bg-red-600 hover:!bg-red-700{% else %}!bg-blue-600 hover:!bg-blue-700{% endif %}">{% if episode.id in watched_episode_ids %}Unwatch{% else %}Watch{% endif %}</button></form></div>{% endfor %}
+        </div></details>{% endif %}{% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if item.recommendations %}
+<div class="mt-12">
+    <h2 class="text-3xl font-bold mb-6 text-white border-b-2 border-gray-700 pb-2">You Might Also Like</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 pt-6">
+        {% for rec in item.recommendations %}
+        <a href="{{ url_for('main.item_detail', item_type=rec.type, item_id=rec.id) }}" class="card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
+            <img src="{{ rec.poster_url }}" alt="Poster for {{ rec.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+            <div class="p-4">
+                <h3 class="font-bold text-lg truncate">{{ rec.title }}</h3>
+                <p class="text-sm text-gray-400">{{ rec.year }}</p>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if item.trailer_key %}
+<div id="trailer-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[999] hidden p-4">
+    <div class="bg-gray-900 p-2 md:p-4 rounded-lg shadow-2xl relative w-full max-w-4xl">
+         <button id="close-trailer-modal" class="absolute -top-3 -right-3 text-white bg-red-600 rounded-full h-8 w-8 flex items-center justify-center text-2xl font-bold leading-none z-10" aria-label="Close trailer">×</button>
+         <div class="aspect-w-16 aspect-h-9">
+             <iframe id="trailer-iframe" src="https://www.youtube.com/embed/{{ item.trailer_key }}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+         </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const openBtn = document.getElementById('open-trailer-modal');
+        const closeBtn = document.getElementById('close-trailer-modal');
+        const modal = document.getElementById('trailer-modal');
+        const iframe = document.getElementById('trailer-iframe');
+
+        if (!modal || !iframe) return;
+        const originalSrc = iframe.src;
+
+        const openModal = () => {
+            modal.classList.remove('hidden');
+            iframe.src = originalSrc + (originalSrc.includes('?') ? '&' : '?') + 'autoplay=1';
+        };
+
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            iframe.src = originalSrc.split("?")[0];
+        };
+
+        if (openBtn) { openBtn.addEventListener('click', openModal); }
+        if (closeBtn) { closeBtn.addEventListener('click', closeModal); }
+        modal.addEventListener('click', (event) => { if (event.target === modal) { closeModal(); } });
+        document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !modal.classList.contains('hidden')) { closeModal(); } });
+    });
+</script>
+{% endif %}
+{% endblock %}

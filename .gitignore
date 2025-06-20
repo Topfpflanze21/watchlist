@@ -1,0 +1,17 @@
+# Virtual Environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE specific
+.idea/
+.vscode/
+
+# Data files (optional, but good if you don't want to track your personal watchlist in Git)
+data/
+
+# Local environment variables (see next point)
+.env

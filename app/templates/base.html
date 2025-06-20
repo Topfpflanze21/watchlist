@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Watchlist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #111827; color: #d1d5db; }
+        .card { background-color: #1f2937; border: 1px solid #374151; }
+        .btn {
+            background-color: #3b82f6; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem;
+            font-weight: 600; text-align: center; transition: background-color 0.2s; display: inline-block;
+        }
+        .btn:hover { background-color: #2563eb; }
+        .btn-secondary { background-color: #4f46e5; }
+        .btn-secondary:hover { background-color: #4338ca; }
+        .btn-danger { background-color: #dc2626; }
+        .btn-danger:hover { background-color: #b91c1c; }
+        .nav-link { color: #9ca3af; transition: color 0.2s; }
+        .nav-link:hover, .nav-link.active { color: white; }
+        .rating-star { color: #f59e0b; }
+        .alert { padding: 1rem; margin-bottom: 1rem; border-radius: 0.5rem; }
+        .alert-error { background-color: #991b1b; color: #fecaca; }
+        .alert-success { background-color: #166534; color: #bbf7d0; }
+        .alert-info { background-color: #1e3a8a; color: #bfdbfe; }
+
+        summary { list-style: none; cursor: pointer; }
+        summary::-webkit-details-marker { display: none; }
+        summary:focus-visible { outline: 2px solid #3b82f6; outline-offset: 4px; border-radius: 4px; }
+        .disclosure-arrow { transition: transform 0.2s; display: inline-block; }
+        details[open] > summary .disclosure-arrow { transform: rotate(0deg); }
+        details:not([open]) > summary .disclosure-arrow { transform: rotate(-90deg); }
+        details[open] > summary ~ * { animation: sweep 0.4s ease-in-out; }
+        @keyframes sweep {
+            0% { opacity: 0; transform: translateY(-1rem); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        .rating-group { display: flex; flex-direction: row-reverse; justify-content: center; align-items: center; }
+        .rating-group input { display: none; }
+        .rating-group label { cursor: pointer; padding: 0.5rem; border-radius: 0.375rem; transition: background-color 0.2s; }
+        .rating-group label:hover { background-color: #4b5563; }
+        .rating-group label .star { font-size: 1.875rem; line-height: 2.25rem; color: #4b5563; transition: color 0.2s; }
+        .rating-group label .rating-number { font-size: 0.75rem; line-height: 1rem; color: #9ca3af; }
+        .rating-group input:checked ~ label .star,
+        .rating-group:hover label:hover ~ label .star,
+        .rating-group:hover label:hover .star { color: #f59e0b; }
+        .rating-group input:checked + label .rating-number { color: white; }
+
+        .tab-btn {
+            padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 500;
+            color: #9ca3af; transition: all 0.2s; border: 2px solid transparent;
+        }
+        .tab-btn.active, .tab-btn:hover { background-color: #374151; color: white; }
+        .tab-btn.active { border-color: #3b82f6; }
+
+        .details-scroll::-webkit-scrollbar { width: 8px; }
+        .details-scroll::-webkit-scrollbar-track { background: #1f2937; }
+        .details-scroll::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 4px; border: 2px solid #1f2937; }
+        .details-scroll::-webkit-scrollbar-thumb:hover { background-color: #6b7280; }
+        .details-scroll { scrollbar-width: thin; scrollbar-color: #4b5563 #1f2937; }
+
+        .aspect-w-16 { position: relative; padding-bottom: 56.25%; }
+        .aspect-h-9 { height: 0; }
+        .aspect-w-16 > * { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    </style>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+</head>
+<body class="min-h-screen">
+    <nav class="bg-gray-900 p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-8">
+                 <a href="{{ url_for('main.index') }}" class="text-2xl font-bold text-white">My Watchlist</a>
+                 <div class="hidden md:flex items-center space-x-2">
+                    <a href="{{ url_for('main.index') }}" class="nav-link text-lg px-3 {% if request.path == url_for('main.index') %}active{% endif %}">Home</a>
+                    <a href="{{ url_for('main.movies') }}" class="nav-link text-lg px-3 {% if request.path == url_for('main.movies') %}active{% endif %}">Movies</a>
+                    <a href="{{ url_for('main.series') }}" class="nav-link text-lg px-3 {% if request.path == url_for('main.series') %}active{% endif %}">Series</a>
+                    <a href="{{ url_for('main.stats') }}" class="nav-link text-lg px-3 {% if request.path == url_for('main.stats') %}active{% endif %}">Statistics</a>
+                 </div>
+            </div>
+            <div class="w-full max-w-xs">
+                <form action="{{ url_for('main.search') }}" method="post" class="relative">
+                    <input type="search" name="query" placeholder="Search to add movies & series..." class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:ring-blue-500 focus:border-blue-500" required>
+                    <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </nav>
+    <main class="container mx-auto p-4 md:p-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="text-center p-4 text-gray-500 text-sm">
+        <p>Movie Tracker App © 2025</p>
+    </footer>
+    <script>
+        function showTab(section, type, clickedButton) {
+            const contentPanels = document.querySelectorAll(`div[id^="${section}-"][class~="tab-content"]`);
+            contentPanels.forEach(panel => { panel.style.display = 'none'; });
+            const activePanel = document.getElementById(`${section}-${type}-content`);
+            if (activePanel) { activePanel.style.display = 'block'; }
+            const tabButtons = clickedButton.parentElement.querySelectorAll('.tab-btn');
+            tabButtons.forEach(button => { button.classList.remove('active'); });
+            clickedButton.classList.add('active');
+        }
+    </script>
+</body>
+</html>

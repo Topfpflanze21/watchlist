@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<details id="planned-section" class="mb-8" open>
+    <summary class="text-3xl font-bold border-b-2 {% if item_type == 'movies' %}border-blue-500{% else %}border-purple-500{% endif %} pb-2 mb-6 flex items-center justify-between">
+        <span>Plan to Watch ({{ planned_items|length }})</span>
+        <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
+    </summary>
+    <div class="pt-2">
+        {% if planned_items %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {% for item in planned_items %}
+            <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}"
+               class="item-card card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
+                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                <div class="p-4">
+                    <h3 class="font-bold text-lg truncate">{{ item.title }}</h3>
+                    <p class="text-sm text-gray-400">{{ item.year }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-400 pt-4">You haven't planned to watch any {{ item_type }} yet.</p>
+        {% endif %}
+    </div>
+</details>
+
+<details id="watched-section" class="mb-8" open>
+    <summary class="text-3xl font-bold border-b-2 {% if item_type == 'movies' %}border-blue-500{% else %}border-purple-500{% endif %} pb-2 mb-6 flex items-center justify-between">
+        {% if item_type == 'movies' %}
+            <span>Watched ({{ watched_items|length }})</span>
+        {% else %}
+            <span>In Progress & Watched ({{ watched_items|length }})</span>
+        {% endif %}
+        <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
+    </summary>
+    <div class="pt-2">
+        {% if watched_items %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+            {% for item in watched_items %}
+            <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}"
+               class="item-card card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl relative">
+
+                {% if item.type == 'movie' and item.get('watch_count', 0) > 1 %}
+                <div class="absolute top-2 right-2 z-10 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                    Watched x{{ item.watch_count }}
+                </div>
+                {% elif item.type == 'series' %}
+                <div class="absolute top-0 left-0 right-0 z-10 bg-black bg-opacity-60 text-white text-xs font-bold p-1 text-center">
+                    {% if item.status == 'Completed' %}
+                        <span class="text-green-400">✔</span> Completed
+                    {% else %}
+                        {{ item.watched_episode_count }} / {{ item.total_episode_count }} Episodes
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                <div class="p-4">
+                    <h3 class="font-bold text-lg truncate">{{ item.title }}</h3>
+                    <p class="text-sm text-gray-400">
+                        Last watched: {{ item.get('last_watched_on') or item.get('watched_on', 'N/A') }}
+                    </p>
+                    <div class="flex items-center mt-2">
+                        {% set rating = item.get('rating')|int if item.get('rating') else 0 %}
+                        {% for i in range(rating) %}<span class="rating-star">★</span>{% endfor %}{% for i in range(5 - rating) %}<span class="text-gray-600">★</span>{% endfor %}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-400 pt-4">You haven't marked any {{ item_type }} as watched yet.</p>
+        {% endif %}
+    </div>
+</details>
+{% endblock %}

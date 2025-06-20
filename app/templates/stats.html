@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-4xl font-bold mb-8 text-center">Your Watchlist Statistics</h1>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mb-12">
+    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Unique Movies Watched</h2><p class="text-5xl font-bold text-blue-400 mt-2">{{ stats.total_movies }}</p></div>
+    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">TV Episodes Watched</h2><p class="text-5xl font-bold text-purple-400 mt-2">{{ stats.total_episodes }}</p></div>
+    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Total Movie Viewings</h2><p class="text-5xl font-bold text-white mt-2">{{ stats.total_movie_watches }}</p></div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="card p-6 rounded-lg">
+        <h3 class="text-2xl font-bold mb-4">Ratings Distribution (All Items)</h3>
+        {% if stats.total_items > 0 %}
+        <div class="space-y-3">
+            {% for rating, count in stats.ratings_dist.items() %}
+            <div class="flex items-center"><div class="w-20 text-right mr-4"><span class="font-semibold">{{ '★' * rating }}</span></div><div class="flex-1 bg-gray-700 rounded-full h-6"><div class="bg-yellow-500 h-6 rounded-full text-right pr-2 text-black font-bold flex items-center justify-end" style="width: {{ (count / stats.total_items * 100)|round|int }}%;">{{ count }}</div></div></div>
+            {% endfor %}
+        </div>
+        {% else %}<p class="text-gray-400">No rated items yet.</p>{% endif %}
+    </div>
+    <div class="card p-6 rounded-lg">
+        <h3 class="text-2xl font-bold mb-4">Favorite Genres (From Watched Items)</h3>
+        <div class="space-y-2">
+            {% if stats.genre_dist %}{% for genre, count in stats.genre_dist %}<div class="flex justify-between items-center text-lg"><span>{{ genre }}</span><span class="font-bold bg-blue-500 text-white rounded-full px-3 py-1 text-sm">{{ count }}</span></div>{% endfor %}{% else %}<p class="text-gray-400">No items watched yet to calculate favorite genres.</p>{% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
