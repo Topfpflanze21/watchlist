@@ -96,16 +96,16 @@ def item_detail_action(item_type, item_id):
         if not any(i.get('id') == item_id for i in watchlist['planned'][internal]):
             watchlist['planned'][internal].append({"id": item_id});
             data_manager.save_watchlist(watchlist)
-            flash(f"Added '{title}' to 'Plan to Watch'.", "success")
+            # flash(f"Added '{title}' to 'Plan to Watch'.", "success")
     elif action == 'remove_plan':
         watchlist['planned'][internal] = [i for i in watchlist['planned'][internal] if i.get('id') != item_id]
         data_manager.save_watchlist(watchlist);
-        flash(f"Removed '{title}' from 'Plan to Watch'.", "success")
+        # flash(f"Removed '{title}' from 'Plan to Watch'.", "success")
     elif action == 'watch' and item_type == 'movie':
         watchlist['watched']['movies'].append({"id": item_id, "watch_id": str(uuid.uuid4()), "watched_on": request.form['watched_on'], "rating": int(request.form['rating'])})
         watchlist['planned']['movies'] = [i for i in watchlist['planned']['movies'] if i.get('id') != item_id]
         data_manager.save_watchlist(watchlist);
-        flash(f"Added watch record for '{title}'.", "success")
+        # flash(f"Added watch record for '{title}'.", "success")
     elif action == 'delete_all':
         watchlist['planned'][internal] = [i for i in watchlist['planned'][internal] if i.get('id') != item_id]
         if item_type == 'movie':
@@ -113,12 +113,12 @@ def item_detail_action(item_type, item_id):
         else:
             watchlist['watched']['series'].pop(str(item_id), None)
         data_manager.save_watchlist(watchlist);
-        flash(f"Deleted all records for '{title}'.", "success")
+        # flash(f"Deleted all records for '{title}'.", "success")
         return redirect(origin)
     elif action == 'delete_watch_instance' and item_type == 'movie':
         watchlist['watched']['movies'] = [w for w in watchlist['watched']['movies'] if w.get('watch_id') != request.form.get('watch_id')]
         data_manager.save_watchlist(watchlist);
-        flash("Watch record deleted.", "success")
+        # flash("Watch record deleted.", "success")
     elif action == 'toggle_episode' and item_type == 'series':
         sid, eid, date = str(item_id), request.form['episode_id'], request.form['watched_on']
         entry = watchlist['watched']['series'].setdefault(sid, {"id": item_id, "watched_episodes": {}})
@@ -130,11 +130,86 @@ def item_detail_action(item_type, item_id):
             del watchlist['watched']['series'][sid]
         watchlist['planned']['series'] = [i for i in watchlist['planned']['series'] if i.get('id') != item_id]
         data_manager.save_watchlist(watchlist)
+    elif action == 'watch_season' and item_type == 'series':
+        season_num_str = request.form.get('season_number')
+        if not season_num_str:
+            flash("Season number not provided.", "error")
+            return redirect(url_for('main.item_detail', item_type=item_type, item_id=item_id, origin=origin))
+        season_num_to_watch = int(season_num_str)
+        date = request.form['watched_on']
+        sid = str(item_id)
+        details = tmdb_api.get_series_details(item_id)
+        if not details or not details.get('seasons'):
+            flash("Could not retrieve episode list for the season.", "error")
+            return redirect(url_for('main.item_detail', item_type=item_type, item_id=item_id, origin=origin))
+        episode_ids_to_add = []
+        for season in details.get('seasons', []):
+            if season.get('season_number') == season_num_to_watch:
+                episode_ids_to_add = [ep['id'] for ep in season.get('episodes', [])]
+                break
+        if not episode_ids_to_add:
+            flash(f"No episodes found for season {season_num_to_watch}.", "info")
+        else:
+            entry = watchlist['watched']['series'].setdefault(sid, {"id": item_id, "watched_episodes": {}})
+            for eid in episode_ids_to_add:
+                if eid not in entry['watched_episodes']:
+                    entry['watched_episodes'][eid] = {"watched_on": date}
+            watchlist['planned']['series'] = [i for i in watchlist['planned']['series'] if i.get('id') != item_id]
+            data_manager.save_watchlist(watchlist)
+            # flash(f"Marked all episodes in season {season_num_to_watch} of '{title}' as watched.", "success")
+    elif action == 'unwatch_season' and item_type == 'series':
+        season_num_str = request.form.get('season_number')
+        if not season_num_str:
+            flash("Season number not provided.", "error")
+            return redirect(url_for('main.item_detail', item_type=item_type, item_id=item_id, origin=origin))
+        season_num_to_unwatch = int(season_num_str)
+        sid = str(item_id)
+        details = tmdb_api.get_series_details(item_id)
+        if not details or not details.get('seasons'):
+            flash("Could not retrieve episode list for the season.", "error")
+            return redirect(url_for('main.item_detail', item_type=item_type, item_id=item_id, origin=origin))
+        episode_ids_to_remove = []
+        for season in details.get('seasons', []):
+            if season.get('season_number') == season_num_to_unwatch:
+                episode_ids_to_remove = [ep['id'] for ep in season.get('episodes', [])]
+                break
+        if sid in watchlist['watched']['series'] and 'watched_episodes' in watchlist['watched']['series'][sid]:
+            for eid in episode_ids_to_remove:
+                if eid in watchlist['watched']['series'][sid]['watched_episodes']:
+                    del watchlist['watched']['series'][sid]['watched_episodes'][eid]
+            if not watchlist['watched']['series'][sid]['watched_episodes'] and 'rating' not in watchlist['watched']['series'][sid]:
+                del watchlist['watched']['series'][sid]
+            data_manager.save_watchlist(watchlist)
+            # flash(f"Marked all episodes in season {season_num_to_unwatch} as unwatched.", "success")
+    elif action == 'watch_all_episodes' and item_type == 'series':
+        details = tmdb_api.get_series_details(item_id)
+        if not details or not details.get('seasons'):
+            flash("Could not retrieve episode list to mark all as watched.", "error")
+            return redirect(url_for('main.item_detail', item_type=item_type, item_id=item_id, origin=origin))
+
+        sid = str(item_id)
+        date = request.form['watched_on']
+        entry = watchlist['watched']['series'].setdefault(sid, {"id": item_id, "watched_episodes": {}})
+        all_episode_ids = [ep['id'] for season in details.get('seasons', []) for ep in season.get('episodes', [])]
+
+        for eid in all_episode_ids:
+            if eid not in entry['watched_episodes']:
+                entry['watched_episodes'][eid] = {"watched_on": date}
+
+        watchlist['planned']['series'] = [i for i in watchlist['planned']['series'] if i.get('id') != item_id]
+        data_manager.save_watchlist(watchlist)
+        # flash(f"Marked all episodes of '{title}' as watched.", "success")
+    elif action == 'unwatch_all_episodes' and item_type == 'series':
+        sid = str(item_id)
+        if sid in watchlist['watched']['series']:
+            del watchlist['watched']['series'][sid]
+            data_manager.save_watchlist(watchlist)
+            # flash(f"Removed all watch records for '{title}'.", "success")
     elif action == 'rate_series' and item_type == 'series':
         entry = watchlist['watched']['series'].setdefault(str(item_id), {"id": item_id, "watched_episodes": {}})
         entry['rating'] = int(request.form['rating'])
         data_manager.save_watchlist(watchlist);
-        flash(f"Rated '{title}'.", "success")
+        # flash(f"Rated '{title}'.", "success")
 
     return redirect(url_for('main.item_detail', item_type=item_type, item_id=item_id, origin=origin))
 

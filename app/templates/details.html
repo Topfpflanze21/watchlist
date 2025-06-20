@@ -81,7 +81,10 @@
                     <div class="flex-grow">
                     {% if watch_history %}
                     <details class="space-y-4 mb-4" open>
-                        <summary class="text-xl font-bold text-white border-b border-gray-600 pb-2 flex items-center justify-between">Watch History</summary>
+                        <summary class="text-xl font-bold text-white border-b border-gray-600 pb-2 flex items-center justify-between">
+                            <span>Watch History</span>
+                            <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
+                        </summary>
                         <div class="pt-3 space-y-3">
                             {% for watch in watch_history %}
                             <div class="flex items-center justify-between gap-x-4 p-3 bg-gray-800 rounded-lg">
@@ -120,11 +123,36 @@
     <div class="p-4 md:p-6 border-t-2 border-gray-700">
         <div class="flex items-start justify-between gap-4 mb-4">
              <div class="flex-grow">
-                <h2 class="text-2xl font-bold">Episode Tracker</h2>
-                {% set watched_count = watched_episode_ids|length %}{% set total_count = item.total_episode_count %}
-                {% if total_count > 0 %}{% set progress_percent = (watched_count / total_count * 100)|round %}<div class="w-full bg-gray-700 rounded-full h-2.5 mt-2"><div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ progress_percent }}%"></div></div><p class="text-sm text-gray-400 mt-1">{{ watched_count }} of {{ total_count }} episodes watched.</p>{% endif %}
+                {% set watched_count = watched_episode_ids|length %}
+                {% set total_count = item.total_episode_count %}
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-2xl font-bold">Episode Tracker</h2>
+                    {% if total_count > 0 %}
+                        {% if watched_count < total_count %}
+                        <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" onsubmit="return confirm('Are you sure you want to mark all episodes as watched?');" class="flex items-center gap-2 watch-action-form">
+                            <input type="hidden" name="action" value="watch_all_episodes">
+                            <input type="hidden" name="watched_on" value="">
+                            <button type="submit" class="btn !bg-green-700 hover:!bg-green-600 !py-1 !px-3 text-sm whitespace-nowrap">Watch All</button>
+                        </form>
+                        {% elif watched_count > 0 %}
+                        <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" onsubmit="return confirm('Are you sure you want to mark all episodes as unwatched?');" class="flex items-center gap-2">
+                            <input type="hidden" name="action" value="unwatch_all_episodes">
+                            <button type="submit" class="btn btn-danger !py-1 !px-3 text-sm whitespace-nowrap">Unwatch All</button>
+                        </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% if total_count > 0 %}
+                    {% set progress_percent = (watched_count / total_count * 100)|round %}
+                    <div class="w-full bg-gray-700 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ progress_percent }}%"></div></div>
+                    <p class="text-sm text-gray-400 mt-1">{{ watched_count }} of {{ total_count }} episodes watched.</p>
+                    <div class="my-4">
+                        <label for="master_date" class="block text-sm font-medium text-gray-300 mb-1">Date for Watch Actions</label>
+                        <input type="date" id="master_date" value="{{ today }}" class="bg-gray-700 border-gray-600 rounded-lg p-2 text-white" style="color-scheme: dark;">
+                    </div>
+                {% endif %}
             </div>
-            <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="space-y-2 border border-gray-600 rounded-lg p-2 bg-gray-800 flex-shrink-0">
+            <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="space-y-2 border border-gray-600 rounded-lg p-2 bg-gray-800 flex-shrink-0 w-56">
                 <input type="hidden" name="action" value="rate_series"><h3 class="font-bold text-sm text-center text-white">Rate This Series</h3><div class="bg-gray-700 rounded-lg"><div class="rating-group !justify-around">
                     {% set current_rating = watched_series_data.get('rating')|int if watched_series_data else 0 %}
                     {% for i in range(5, 0, -1) %}<input type="radio" id="rating-{{ i }}" name="rating" value="{{ i }}" required {% if i == current_rating %}checked{% endif %} onchange="this.form.submit()"><label for="rating-{{ i }}" class="!p-1"><span class="star !text-xl">★</span></label>{% endfor %}
@@ -132,11 +160,77 @@
             </form>
         </div>
         <div class="space-y-2 max-h-[60vh] overflow-y-auto pr-2 details-scroll">
-        {% for season in item.seasons %}{% if season.episodes %}{% set watched_in_season = season.episodes|selectattr('id', 'in', watched_episode_ids)|list %}<details class="bg-gray-800 rounded-lg" {% if season.season_number > 0 and (watched_in_season|length < season.episode_count or not watched_in_season) %}open{% endif %}><summary class="p-3 font-bold text-lg cursor-pointer flex justify-between items-center hover:bg-gray-700 rounded-t-lg transition-colors"><span>{{ season.name }} ({{ watched_in_season|length }} / {{ season.episode_count }})</span><span class="disclosure-arrow text-gray-400 text-2xl">▼</span></summary><div class="border-t border-gray-700 p-2 md:p-3 space-y-2">
-            {% for episode in season.episodes %}<div class="flex items-center justify-between rounded-md p-1.5 {% if episode.id in watched_episode_ids %}bg-green-900/40{% else %}bg-gray-900/30{% endif %}"><div class="flex items-center gap-x-3"><span class="text-gray-400 font-mono text-xs sm:text-sm w-16 text-center">S{{ "%02d"|format(season.season_number) }}E{{ "%02d"|format(episode.episode_number) }}</span><div class="flex-grow"><p class="font-semibold text-sm">{{ episode.name }}</p></div></div><form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="ml-2"><input type="hidden" name="action" value="toggle_episode"><input type="hidden" name="episode_id" value="{{ episode.id }}"><input type="hidden" name="watched_on" value="{{ today }}"><button type="submit" class="btn !py-1 !px-2 text-xs whitespace-nowrap {% if episode.id in watched_episode_ids %}!bg-red-600 hover:!bg-red-700{% else %}!bg-blue-600 hover:!bg-blue-700{% endif %}">{% if episode.id in watched_episode_ids %}Unwatch{% else %}Watch{% endif %}</button></form></div>{% endfor %}
+        {# First, find the season number of the first unwatched real season #}
+        {% set first_unwatched_season = namespace(number=None) %}
+        {% for season in item.seasons %}
+            {% if first_unwatched_season.number is none %}
+                {% set watched_in_season = season.episodes|selectattr('id', 'in', watched_episode_ids)|list %}
+                {% if season.season_number > 0 and season.episode_count > 0 and watched_in_season|length < season.episode_count %}
+                    {% set first_unwatched_season.number = season.season_number %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+
+        {% for season in item.seasons %}{% if season.episodes %}{% set watched_in_season = season.episodes|selectattr('id', 'in', watched_episode_ids)|list %}<details class="bg-gray-800 rounded-lg" {% if season.season_number == first_unwatched_season.number %}open{% endif %}><summary class="p-3 font-bold text-lg cursor-pointer flex justify-between items-center hover:bg-gray-700 rounded-t-lg transition-colors">
+            <span>{{ season.name }} ({{ watched_in_season|length }} / {{ season.episode_count }})</span>
+            <div class="flex-grow"></div>
+            <div class="flex items-center gap-4">
+                {% if season.episode_count > 0 %}
+                    {% if watched_in_season|length < season.episode_count %}
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="watch-action-form" onsubmit="event.stopPropagation(); return confirm('Mark all episodes in this season as watched?');">
+                        <input type="hidden" name="action" value="watch_season">
+                        <input type="hidden" name="season_number" value="{{ season.season_number }}">
+                        <input type="hidden" name="watched_on" value="">
+                        <button type="submit" class="btn !py-1 !px-2 text-xs">Watch Season</button>
+                    </form>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" onsubmit="event.stopPropagation(); return confirm('Mark all episodes in this season as unwatched?');">
+                        <input type="hidden" name="action" value="unwatch_season">
+                        <input type="hidden" name="season_number" value="{{ season.season_number }}">
+                        <button type="submit" class="btn btn-danger !py-1 !px-2 text-xs">Unwatch Season</button>
+                    </form>
+                    {% endif %}
+                {% endif %}
+                <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
+            </div>
+        </summary><div class="border-t border-gray-700 p-2 md:p-3 space-y-2">
+            {% for episode in season.episodes %}<div class="flex items-center justify-between rounded-md p-1.5 {% if episode.id in watched_episode_ids %}bg-green-900/40{% else %}bg-gray-900/30{% endif %}">
+                <div class="flex items-center gap-x-3 flex-grow">
+                    <span class="text-gray-400 font-mono text-xs sm:text-sm w-16 text-center">S{{ "%02d"|format(season.season_number) }}E{{ "%02d"|format(episode.episode_number) }}</span>
+                    <div class="flex-grow"><p class="font-semibold text-sm">{{ episode.name }}</p></div>
+                </div>
+                <div class="flex items-center gap-x-3 flex-shrink-0">
+                    {% if episode.id in watched_episode_ids %}
+                    <span class="text-xs text-gray-400 whitespace-nowrap">{{ watched_series_data.watched_episodes[episode.id].watched_on }}</span>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="ml-2 watch-action-form">
+                        <input type="hidden" name="action" value="toggle_episode">
+                        <input type="hidden" name="episode_id" value="{{ episode.id }}">
+                        <input type="hidden" name="watched_on" value="">
+                        <button type="submit" class="btn !py-1 !px-2 text-xs whitespace-nowrap {% if episode.id in watched_episode_ids %}!bg-red-600 hover:!bg-red-700{% else %}!bg-blue-600 hover:!bg-blue-700{% endif %}">{% if episode.id in watched_episode_ids %}Unwatch{% else %}Watch{% endif %}</button>
+                    </form>
+                </div>
+            </div>{% endfor %}
         </div></details>{% endif %}{% endfor %}
         </div>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const masterDate = document.getElementById('master_date');
+            if (!masterDate) return;
+
+            const forms = document.querySelectorAll('.watch-action-form');
+
+            forms.forEach(form => {
+                const watchedOnInput = form.querySelector('input[name="watched_on"]');
+                if (watchedOnInput) {
+                    form.addEventListener('submit', function() {
+                        watchedOnInput.value = masterDate.value;
+                    });
+                }
+            });
+        });
+    </script>
     {% endif %}
 </div>
 
