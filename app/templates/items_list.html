@@ -83,17 +83,19 @@
                data-genre="{{ item.genre|default('', true) }}"
                data-actors="{{ item.actors|default('', true) }}">
 
-                {% if item.type == 'movie' and item.get('watch_count', 0) > 1 %}
-                <div class="absolute top-2 right-2 z-10 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-                    Watched x{{ item.watch_count }}
-                </div>
-                {% elif item.type == 'series' %}
+                {% if item.type == 'series' %}
                 <div class="absolute top-0 left-0 right-0 z-10 bg-black bg-opacity-60 text-white text-xs font-bold p-1 text-center">
                     {% if item.status == 'Completed' %}
                         <span class="text-green-400">✔</span> Completed
                     {% else %}
                         {{ item.watched_episode_count }} / {{ item.total_episode_count }} Episodes
                     {% endif %}
+                </div>
+                {% endif %}
+
+                {% if item.get('watch_count', 0) > 1 %}
+                <div class="absolute right-2 z-10 {% if item.type == 'series' %}top-8{% else %}top-2{% endif %} {% if item.type == 'movie' %}bg-blue-600{% else %}bg-purple-600{% endif %} text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                    Watched x{{ item.watch_count }}
                 </div>
                 {% endif %}
 

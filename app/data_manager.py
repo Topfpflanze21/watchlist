@@ -33,6 +33,24 @@ def migrate_watchlist_add_uuids_to_movies(watchlist):
                 made_changes = True
     return made_changes
 
+def migrate_series_to_multi_watch(watchlist):
+    """Migrates series data to support multiple watch-throughs."""
+    made_changes = False
+    watched_series = watchlist.get('watched', {}).get('series', {})
+    for series_id, data in watched_series.items():
+        if isinstance(data, dict): # Old format: series_id -> {details}
+            print(f"Migrating series {series_id} to multi-watch format.")
+            new_watch_record = {
+                "series_watch_id": str(uuid.uuid4()),
+                "watched_episodes": data.get("watched_episodes", {})
+            }
+            if 'rating' in data:
+                new_watch_record['rating'] = data['rating']
+            watched_series[series_id] = [new_watch_record] # New format: series_id -> [list of watches]
+            made_changes = True
+    return made_changes
+
+
 def load_watchlist():
     """Loads the main watchlist data, performing data migrations if necessary."""
     watchlist_file = current_app.config['WATCHLIST_FILE']
@@ -43,6 +61,11 @@ def load_watchlist():
     if migrate_watchlist_add_uuids_to_movies(watchlist):
         print("Migrating movie watchlist: Added unique IDs.")
         save_json_file(watchlist_file, watchlist)
+
+    if migrate_series_to_multi_watch(watchlist):
+        print("Migrating series data to new multi-watch format.")
+        save_json_file(watchlist_file, watchlist)
+
     if 'series' not in watchlist.get('watched', {}) or isinstance(watchlist['watched']['series'], list):
         print("Migrating series data to new episode-tracking format.")
         watchlist['watched']['series'] = {} # Replace old list with new dict format

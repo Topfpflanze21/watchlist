@@ -62,7 +62,16 @@ def get_smart_suggestions(item_type):
         source_items = watchlist['watched']['movies']
     else:  # 'series'
         user_item_ids.update(int(id) for id in watchlist['watched']['series'])
-        source_items = list(watchlist['watched']['series'].values())
+        # FIX: Flatten the list of watch-throughs to handle the multi-watch data structure.
+        source_items = []
+        for sid, watch_throughs in watchlist['watched']['series'].items():
+            for watch in watch_throughs:
+                source_items.append({
+                    'id': int(sid),
+                    'rating': watch.get('rating'),
+                    'watched_episodes': watch.get('watched_episodes', {})
+                })
+
 
     scores, recommendation_data = {}, {}
     for item in source_items:
