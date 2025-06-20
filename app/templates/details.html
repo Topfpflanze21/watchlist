@@ -97,10 +97,12 @@
                                 <div class="flex items-center justify-between gap-x-4 p-3 bg-gray-800 rounded-lg" data-watch-id="{{ watch.watch_id }}">
                                     <div class="flex items-center gap-x-3">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                        <p class="text-sm text-gray-200">Watched on <strong class="font-semibold text-white">{{ watch.watched_on }}</strong></p>
+                                        <p class="text-sm text-gray-200">Watched on <strong class="font-semibold text-white">{{ watch.watched_on or 'N/A' }}</strong></p>
                                     </div>
                                     <div class="flex items-center gap-x-4">
-                                        <div class="flex-shrink-0 rating-star">{{ '★' * watch.rating }}<span class="text-gray-600">{{ '★' * (5 - watch.rating) }}</span></div>
+                                        <div class="flex-shrink-0 rating-star">
+                                            {% if watch.rating %}{{ '★' * watch.rating }}{% endif %}<span class="text-gray-600">{{ '★' * (5 - (watch.rating or 0)) }}</span>
+                                        </div>
                                         <form class="ajax-form" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" method="POST">
                                             <input type="hidden" name="action" value="delete_watch_instance"><input type="hidden" name="watch_id" value="{{ watch.watch_id }}">
                                             <button type="submit" data-confirm="Delete this watch record?" data-confirm-btn-text="Delete" data-confirm-btn-class="btn-danger" title="Delete record" class="bg-red-800 hover:bg-red-700 text-white p-2 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41z"/></svg></button>
@@ -115,9 +117,9 @@
                     <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="ajax-form space-y-4 border-2 border-gray-600 rounded-lg p-4 bg-gray-800 mt-auto">
                          <input type="hidden" name="action" value="watch">
                         <h3 class="font-bold text-lg text-center text-white">{% if is_watched %}Add New Watch Record{% else %}I've Watched This{% endif %}</h3>
-                        <div><label for="watched_on" class="block text-sm font-medium text-gray-300 mb-1">Watched On</label><input type="date" name="watched_on" required value="{{ today }}" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 text-white" style="color-scheme: dark;"></div>
-                        <div><label class="block text-sm font-medium text-gray-300 mb-2">Your Rating</label><div class="bg-gray-700 rounded-lg p-2"><div class="rating-group">
-                            {% for i in range(5, 0, -1) %}<input type="radio" id="rating-{{ i }}" name="rating" value="{{ i }}" required><label for="rating-{{ i }}"><span class="star">★</span><span class="rating-number">{{ i }}</span></label>{% endfor %}
+                        <div><label for="watched_on" class="block text-sm font-medium text-gray-300 mb-1">Watched On (Optional)</label><input type="date" name="watched_on" value="{{ today }}" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 text-white" style="color-scheme: dark;"></div>
+                        <div><label class="block text-sm font-medium text-gray-300 mb-2">Your Rating (Optional)</label><div class="bg-gray-700 rounded-lg p-2"><div class="rating-group">
+                            {% for i in range(5, 0, -1) %}<input type="radio" id="rating-{{ i }}" name="rating" value="{{ i }}"><label for="rating-{{ i }}"><span class="star">★</span><span class="rating-number">{{ i }}</span></label>{% endfor %}
                         </div></div></div>
                         <button type="submit" class="w-full btn !py-2">{% if is_watched %}Add Watch Record{% else %}Add to 'Watched'{% endif %}</button>
                     </form>
@@ -154,15 +156,15 @@
                     <div class="w-full bg-gray-700 rounded-full h-2.5"><div id="series-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: {{ progress_percent }}%"></div></div>
                     <p id="series-progress-text" class="text-sm text-gray-400 mt-1">{{ watched_count }} of {{ total_count }} episodes watched.</p>
                     <div class="my-4">
-                        <label for="master_date" class="block text-sm font-medium text-gray-300 mb-1">Date for Watch Actions</label>
+                        <label for="master_date" class="block text-sm font-medium text-gray-300 mb-1">Date for Watch Actions (Optional)</label>
                         <input type="date" id="master_date" value="{{ today }}" class="bg-gray-700 border-gray-600 rounded-lg p-2 text-white" style="color-scheme: dark;">
                     </div>
                 {% endif %}
             </div>
             <form id="rate-series-form" method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="ajax-form space-y-2 border border-gray-600 rounded-lg p-2 bg-gray-800 flex-shrink-0 w-56">
-                <input type="hidden" name="action" value="rate_series"><h3 class="font-bold text-sm text-center text-white">Rate This Series</h3><div class="bg-gray-700 rounded-lg"><div class="rating-group !justify-around">
+                <input type="hidden" name="action" value="rate_series"><h3 class="font-bold text-sm text-center text-white">Rate This Series (Optional)</h3><div class="bg-gray-700 rounded-lg"><div class="rating-group !justify-around">
                     {% set current_rating = watched_series_data.get('rating')|int if watched_series_data else 0 %}
-                    {% for i in range(5, 0, -1) %}<input type="radio" id="rating-{{ i }}" name="rating" value="{{ i }}" required {% if i == current_rating %}checked{% endif %}><label for="rating-{{ i }}" class="!p-1"><span class="star !text-xl">★</span></label>{% endfor %}
+                    {% for i in range(5, 0, -1) %}<input type="radio" id="rating-{{ i }}" name="rating" value="{{ i }}" {% if i == current_rating %}checked{% endif %}><label for="rating-{{ i }}" class="!p-1"><span class="star !text-xl">★</span></label>{% endfor %}
                 </div></div>
             </form>
         </div>
@@ -207,7 +209,7 @@
                     <div class="flex-grow"><p class="font-semibold text-sm">{{ episode.name }}</p></div>
                 </div>
                 <div class="flex items-center gap-x-3 flex-shrink-0">
-                    {% if episode.id in watched_episode_ids %}
+                    {% if episode.id in watched_episode_ids and watched_series_data.watched_episodes[episode.id].watched_on %}
                     <span class="text-xs text-gray-400 whitespace-nowrap">{{ watched_series_data.watched_episodes[episode.id].watched_on }}</span>
                     {% endif %}
                     <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="ml-2 watch-action-form ajax-form">
@@ -259,7 +261,7 @@
     <div class="bg-gray-900 p-2 md:p-4 rounded-lg shadow-2xl relative w-full max-w-4xl">
          <button id="close-trailer-modal" class="absolute -top-3 -right-3 text-white bg-red-600 rounded-full h-8 w-8 flex items-center justify-center text-2xl font-bold leading-none z-10" aria-label="Close trailer">×</button>
          <div class="aspect-w-16 aspect-h-9">
-             <iframe id="trailer-iframe" src="https://www.youtube.com/embed/{{ item.trailer_key }}" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+             <iframe id="trailer-iframe" data-src-base="https://www.youtube.com/embed/{{ item.trailer_key }}" src="about:blank" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
          </div>
     </div>
 </div>
@@ -271,16 +273,18 @@
         const iframe = document.getElementById('trailer-iframe');
 
         if (!modal || !iframe) return;
-        const originalSrc = iframe.src;
+        const srcBase = iframe.getAttribute('data-src-base');
 
         const openModal = () => {
             modal.classList.remove('hidden');
-            iframe.src = originalSrc + (originalSrc.includes('?') ? '&' : '?') + 'autoplay=1';
+            if(iframe.src !== srcBase) {
+                iframe.src = srcBase + (srcBase.includes('?') ? '&' : '?') + 'autoplay=1';
+            }
         };
 
         const closeModal = () => {
             modal.classList.add('hidden');
-            iframe.src = originalSrc.split("?")[0];
+            iframe.src = 'about:blank';
         };
 
         if (openBtn) { openBtn.addEventListener('click', openModal); }
@@ -297,7 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ratingForm) {
         ratingForm.addEventListener('change', (e) => {
             if (e.target.matches('input[type="radio"]')) {
-                ratingForm.requestSubmit();
+                const radio = ratingForm.querySelector('input[type=radio]:checked');
+                if (radio) performAjaxSubmit(ratingForm);
             }
         });
     }
@@ -306,8 +311,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(form);
 
         if (form.matches('.watch-action-form')) {
-            const masterDate = document.getElementById('master_date')?.value;
-            if (masterDate) formData.set('watched_on', masterDate);
+            const masterDateInput = document.getElementById('master_date');
+            if (masterDateInput && masterDateInput.value) {
+                 formData.set('watched_on', masterDateInput.value);
+            } else {
+                 formData.delete('watched_on');
+            }
         }
 
         console.log(`[AJAX] Submitting action: ${formData.get('action')}`);
@@ -368,11 +377,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (action === 'toggle_episode') {
             updateEpisodeUI(form, data);
             updateSeriesProgress(data);
+            updatePlanButton(data.is_planned);
         }
         if (action === 'watch') {
             updateMovieWatchUI(form, data);
-            const radio = form.querySelector('input[type=radio]:checked');
-            if(radio) radio.checked = false;
+            form.reset();
+            const dateInput = form.querySelector('input[name="watched_on"]');
+            if (dateInput) dateInput.value = '{{ today }}';
         }
         if (action === 'delete_watch_instance') {
             const elementToRemove = document.querySelector(`[data-watch-id="${data.watch_id}"]`);
@@ -435,7 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 watchedOnSpan.className = 'text-xs text-gray-400 whitespace-nowrap';
                 form.insertAdjacentElement('beforebegin', watchedOnSpan);
             }
-            if(watchedOnSpan) watchedOnSpan.textContent = data.watched_on;
+            if(watchedOnSpan) watchedOnSpan.textContent = data.watched_on || '';
         } else {
             episodeDiv.classList.replace('bg-green-900/40', 'bg-gray-900/30');
             if (button) button.textContent = 'Watch';
@@ -484,13 +495,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const watch = data.new_watch_record;
-        const stars = '★'.repeat(watch.rating) + '<span class="text-gray-600">' + '★'.repeat(5 - watch.rating) + '</span>';
+        const stars = (watch.rating ? '★'.repeat(watch.rating) : '') + '<span class="text-gray-600">' + '★'.repeat(5 - (watch.rating || 0)) + '</span>';
         const formActionUrl = form.getAttribute('action');
         const newRecordHtml = `
             <div class="flex items-center justify-between gap-x-4 p-3 bg-gray-800 rounded-lg" data-watch-id="${watch.watch_id}">
                 <div class="flex items-center gap-x-3">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    <p class="text-sm text-gray-200">Watched on <strong class="font-semibold text-white">${watch.watched_on}</strong></p>
+                    <p class="text-sm text-gray-200">Watched on <strong class="font-semibold text-white">${watch.watched_on || 'N/A'}</strong></p>
                 </div>
                 <div class="flex items-center gap-x-4">
                     <div class="flex-shrink-0 rating-star">${stars}</div>

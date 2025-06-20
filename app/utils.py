@@ -70,11 +70,13 @@ def get_smart_suggestions(item_type):
         if id_str not in cache[item_type] or 'recommendations' not in cache[item_type][id_str]:
             continue
 
-        rating = item.get('rating', 3)
+        rating = item.get('rating')
+        if rating is None: continue # Skip items that have not been rated
+
         if item_type == 'movies':
             date_str = item.get('watched_on')
         else:
-            date_str = max(e['watched_on'] for e in item['watched_episodes'].values()) if item.get('watched_episodes') else None
+            date_str = max((e['watched_on'] for e in item['watched_episodes'].values() if e.get('watched_on')), default=None) if item.get('watched_episodes') else None
         if not date_str: continue
 
         try:

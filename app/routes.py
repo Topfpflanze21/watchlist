@@ -34,7 +34,7 @@ def movies():
     for watch in watchlist['watched']['movies']:
         watches.setdefault(watch['id'], []).append(watch)
 
-    watched_items = sorted([({**cache['movies'][str(id)], **max(w, key=lambda x: x['watched_on']), 'watch_count': len(w), 'type': 'movie'}) for id, w in watches.items() if str(id) in cache['movies']], key=lambda x: x['watched_on'], reverse=True)
+    watched_items = sorted([({**cache['movies'][str(id)], **max(w, key=lambda x: x.get('watched_on') or '0001-01-01'), 'watch_count': len(w), 'type': 'movie'}) for id, w in watches.items() if str(id) in cache['movies']], key=lambda x: x.get('watched_on') or '0001-01-01', reverse=True)
 
     planned_items = [{**cache['movies'][str(m['id'])], **m, 'type': 'movie'} for m in watchlist['planned']['movies'] if str(m['id']) in cache['movies']]
     return render_template('items_list.html', item_type='movies', watched_items=watched_items, planned_items=planned_items)
@@ -49,11 +49,11 @@ def series():
             details = cache['series'][sid]
             w_ep_c = len(sdata.get('watched_episodes', {}))
             t_ep_c = details.get('total_episode_count', 0)
-            last_on = max(e['watched_on'] for e in sdata['watched_episodes'].values()) if sdata.get('watched_episodes') else 'N/A'
+            last_on = max((e['watched_on'] for e in sdata['watched_episodes'].values() if e.get('watched_on')), default='N/A')
             status = 'Completed' if t_ep_c > 0 and w_ep_c == t_ep_c else 'In Progress'
             watched_items.append({**details, **sdata, 'type': 'series', 'watched_episode_count': w_ep_c, 'total_episode_count': t_ep_c, 'status': status, 'last_watched_on': last_on})
 
-    watched_items.sort(key=lambda x: x['last_watched_on'], reverse=True)
+    watched_items.sort(key=lambda x: x.get('last_watched_on') or '0001-01-01', reverse=True)
     planned_items = [{**cache['series'][str(s['id'])], **s, 'type': 'series'} for s in watchlist['planned']['series'] if str(s['id']) in cache['series']]
     return render_template('items_list.html', item_type='series', watched_items=watched_items, planned_items=planned_items)
 
@@ -73,7 +73,7 @@ def item_detail(item_type, item_id):
     origin = request.referrer or url_for(f'main.{internal_type}')
 
     if item_type == 'movie':
-        watch_history = sorted([i for i in watchlist['watched']['movies'] if i.get('id') == item_id], key=lambda x: x['watched_on'], reverse=True)
+        watch_history = sorted([i for i in watchlist['watched']['movies'] if i.get('id') == item_id], key=lambda x: x.get('watched_on') or '0001-01-01', reverse=True)
         is_planned = any(i.get('id') == item_id for i in watchlist['planned']['movies'])
         is_watched = bool(watch_history)
         if is_watched: item_to_show.update(watch_history[0])
@@ -101,7 +101,10 @@ def item_detail_action(item_type, item_id):
         watchlist['planned'][internal] = [i for i in watchlist['planned'][internal] if i.get('id') != item_id]
         data_manager.save_watchlist(watchlist);
     elif action == 'watch' and item_type == 'movie':
-        watchlist['watched']['movies'].append({"id": item_id, "watch_id": str(uuid.uuid4()), "watched_on": request.form['watched_on'], "rating": int(request.form['rating'])})
+        watched_on = request.form.get('watched_on') or None
+        rating_str = request.form.get('rating')
+        rating = int(rating_str) if rating_str else None
+        watchlist['watched']['movies'].append({"id": item_id, "watch_id": str(uuid.uuid4()), "watched_on": watched_on, "rating": rating})
         watchlist['planned']['movies'] = [i for i in watchlist['planned']['movies'] if i.get('id') != item_id]
         data_manager.save_watchlist(watchlist);
     elif action == 'delete_all':
@@ -116,7 +119,7 @@ def item_detail_action(item_type, item_id):
         watchlist['watched']['movies'] = [w for w in watchlist['watched']['movies'] if w.get('watch_id') != request.form.get('watch_id')]
         data_manager.save_watchlist(watchlist);
     elif action == 'toggle_episode' and item_type == 'series':
-        sid, eid, date = str(item_id), request.form['episode_id'], request.form['watched_on']
+        sid, eid, date = str(item_id), request.form['episode_id'], request.form.get('watched_on') or None
         entry = watchlist['watched']['series'].setdefault(sid, {"id": item_id, "watched_episodes": {}})
         if eid in entry['watched_episodes']:
             del entry['watched_episodes'][eid]
@@ -130,7 +133,7 @@ def item_detail_action(item_type, item_id):
         season_num_str = request.form.get('season_number')
         if not season_num_str: return redirect(url_for('main.item_detail', item_type=item_type, item_id=item_id, origin=origin))
         season_num_to_watch = int(season_num_str)
-        date, sid = request.form['watched_on'], str(item_id)
+        date, sid = request.form.get('watched_on') or None, str(item_id)
         details = tmdb_api.get_series_details(item_id)
         if not details or not details.get('seasons'): return redirect(url_for('main.item_detail', item_type=item_type, item_id=item_id, origin=origin))
         episode_ids_to_add = [ep['id'] for season in details.get('seasons', []) if season.get('season_number') == season_num_to_watch for ep in season.get('episodes', [])]
@@ -160,7 +163,7 @@ def item_detail_action(item_type, item_id):
         if action == 'watch_all_episodes':
             details = tmdb_api.get_series_details(item_id)
             if details and details.get('seasons'):
-                sid, date = str(item_id), request.form['watched_on']
+                sid, date = str(item_id), request.form.get('watched_on') or None
                 entry = watchlist['watched']['series'].setdefault(sid, {"id": item_id, "watched_episodes": {}})
                 all_episode_ids = [ep['id'] for season in details.get('seasons', []) for ep in season.get('episodes', [])]
                 for eid in all_episode_ids:
@@ -173,9 +176,11 @@ def item_detail_action(item_type, item_id):
                 data_manager.save_watchlist(watchlist)
         return redirect(url_for('main.item_detail', item_type=item_type, item_id=item_id, origin=origin))
     elif action == 'rate_series' and item_type == 'series':
-        entry = watchlist['watched']['series'].setdefault(str(item_id), {"id": item_id, "watched_episodes": {}})
-        entry['rating'] = int(request.form['rating'])
-        data_manager.save_watchlist(watchlist);
+        rating_str = request.form.get('rating')
+        if rating_str:
+            entry = watchlist['watched']['series'].setdefault(str(item_id), {"id": item_id, "watched_episodes": {}})
+            entry['rating'] = int(rating_str)
+            data_manager.save_watchlist(watchlist);
 
     # AJAX response for most actions
     response_data = {'status': 'success', 'action': action}
@@ -191,13 +196,13 @@ def item_detail_action(item_type, item_id):
             is_watched_ep = sdata and eid in sdata.get('watched_episodes', {})
             response_data['episode_id'] = eid
             response_data['is_episode_watched'] = is_watched_ep
-            if is_watched_ep: response_data['watched_on'] = sdata['watched_episodes'][eid]['watched_on']
+            if is_watched_ep: response_data['watched_on'] = sdata['watched_episodes'][eid].get('watched_on')
     elif item_type == 'movie':
         is_planned = any(i.get('id') == item_id for i in watchlist['planned']['movies'])
         watch_history = [i for i in watchlist['watched']['movies'] if i.get('id') == item_id]
         response_data.update({'is_planned': is_planned, 'is_watched': bool(watch_history)})
         if action == 'watch':
-            response_data['new_watch_record'] = sorted(watch_history, key=lambda x: x['watched_on'], reverse=True)[0]
+            response_data['new_watch_record'] = sorted(watch_history, key=lambda x: x.get('watched_on') or '0001-01-01', reverse=True)[0]
         if action == 'delete_watch_instance':
             response_data['watch_id'] = request.form.get('watch_id')
     return jsonify(response_data)
@@ -266,7 +271,7 @@ def stats():
 
         meta = cache['movies'][movie_id_str]
 
-        if 'rating' in movie_watch: all_ratings.append(movie_watch['rating'])
+        if movie_watch.get('rating') is not None: all_ratings.append(movie_watch['rating'])
         if meta.get('actors'): actors.extend([a.strip() for a in meta['actors'].split(',') if a.strip()])
         if meta.get('director'): directors_creators.append(meta['director'])
         if meta.get('genre'): genres.extend([g.strip() for g in meta['genre'].split(',') if g.strip()])
@@ -275,7 +280,9 @@ def stats():
         runtime = meta.get('runtime') or 0
         movie_watch_time_minutes += runtime
         try:
-            watch_date = datetime.strptime(movie_watch['watched_on'], '%Y-%m-%d')
+            watch_date_str = movie_watch.get('watched_on')
+            if not watch_date_str: continue
+            watch_date = datetime.strptime(watch_date_str, '%Y-%m-%d')
             day_name = calendar.day_name[watch_date.weekday()]
             month_key = watch_date.strftime('%Y-%m')
 
@@ -283,7 +290,7 @@ def stats():
             daily_activity[day_name]['runtime'] += runtime
             monthly_activity[month_key]['count'] += 1
             monthly_activity[month_key]['runtime'] += runtime
-        except (ValueError, KeyError):
+        except (ValueError, KeyError, TypeError):
             continue
 
     # 2. Process Series
@@ -294,7 +301,7 @@ def stats():
 
         meta = cache['series'][sid]
 
-        if 'rating' in series_watch: all_ratings.append(series_watch['rating'])
+        if series_watch.get('rating') is not None: all_ratings.append(series_watch['rating'])
         if meta.get('actors'): actors.extend([a.strip() for a in meta['actors'].split(',') if a.strip()])
         if meta.get('creator'): directors_creators.append(meta['creator'])
         if meta.get('genre'): genres.extend([g.strip() for g in meta['genre'].split(',') if g.strip()])
@@ -307,7 +314,9 @@ def stats():
 
             series_watch_time_minutes += runtime
             try:
-                watch_date = datetime.strptime(ep_watch['watched_on'], '%Y-%m-%d')
+                watch_date_str = ep_watch.get('watched_on')
+                if not watch_date_str: continue
+                watch_date = datetime.strptime(watch_date_str, '%Y-%m-%d')
                 day_name = calendar.day_name[watch_date.weekday()]
                 month_key = watch_date.strftime('%Y-%m')
 
@@ -315,7 +324,7 @@ def stats():
                 daily_activity[day_name]['runtime'] += runtime
                 monthly_activity[month_key]['count'] += 1
                 monthly_activity[month_key]['runtime'] += runtime
-            except (ValueError, KeyError):
+            except (ValueError, KeyError, TypeError):
                 continue
 
     # --- Final Calculations ---
@@ -324,7 +333,7 @@ def stats():
 
     day_order = list(calendar.day_name)
     sorted_daily_activity = sorted(daily_activity.items(), key=lambda i: day_order.index(i[0]))
-    max_daily_count = max(d[1]['count'] for d in sorted_daily_activity) if sorted_daily_activity else 0
+    max_daily_count = max((d[1]['count'] for d in sorted_daily_activity), default=0)
 
     movies_time_percent = (movie_watch_time_minutes / total_watch_time_minutes * 100) if total_watch_time_minutes > 0 else 0
 
