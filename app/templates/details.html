@@ -94,18 +94,48 @@
                             </summary>
                             <div id="watch-history-list" class="pt-3 space-y-3">
                                 {% for watch in watch_history %}
-                                <div class="flex items-center justify-between gap-x-4 p-3 bg-gray-800 rounded-lg" data-watch-id="{{ watch.watch_id }}">
-                                    <div class="flex items-center gap-x-3">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                        <p class="text-sm text-gray-200">Watched on <strong class="font-semibold text-white">{{ watch.watched_on or 'N/A' }}</strong></p>
-                                    </div>
-                                    <div class="flex items-center gap-x-4">
-                                        <div class="flex-shrink-0 rating-star">
-                                            {% if watch.rating %}{{ '★' * watch.rating }}{% endif %}<span class="text-gray-600">{{ '★' * (5 - (watch.rating or 0)) }}</span>
+                                <div class="history-item-container flex items-center bg-gray-800 rounded-lg p-3 gap-x-2 transition-colors duration-300" data-watch-id="{{ watch.watch_id }}">
+
+                                    <div class="watch-display flex-grow flex items-center justify-between">
+                                        <div class="flex items-center gap-x-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                            <p class="text-sm text-gray-200">Watched on <strong class="font-semibold text-white">{{ watch.watched_on or 'N/A' }}</strong></p>
                                         </div>
-                                        <form class="ajax-form" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" method="POST">
+                                        <div class="flex items-center gap-x-4">
+                                            <div class="flex-shrink-0 rating-star">
+                                                {% set current_rating = watch.rating|int if watch.rating else 0 %}
+                                                {% if current_rating > 0 %}{{ '★' * current_rating }}{% endif %}<span class="text-gray-600">{{ '★' * (5 - current_rating) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <form class="ajax-form edit-watch-form flex-grow hidden items-center justify-between"
+                                          action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}"
+                                          method="POST">
+                                        <input type="hidden" name="action" value="edit_watch_instance">
+                                        <input type="hidden" name="watch_id" value="{{ watch.watch_id }}">
+                                        <div class="flex items-center gap-x-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                            <input type="date" name="watched_on" value="{{ watch.watched_on or '' }}" class="bg-gray-700 border-gray-600 rounded-lg p-2 text-white text-sm" style="color-scheme: dark;">
+                                        </div>
+                                        <div class="flex items-center gap-x-2">
+                                            <div class="rating-group !justify-start">
+                                                 {% set current_rating = watch.rating|int if watch.rating else 0 %}
+                                                 {% for i in range(5, 0, -1) %}
+                                                     <input type="radio" id="rating-{{ i }}-{{ watch.watch_id }}" name="rating" value="{{ i }}" {% if i == current_rating %}checked{% endif %}>
+                                                     <label for="rating-{{ i }}-{{ watch.watch_id }}" class="!p-1"><span class="star !text-lg">★</span></label>
+                                                 {% endfor %}
+                                            </div>
+                                        </div>
+                                    </form>
+
+                                    <div class="watch-controls flex items-center gap-x-2">
+                                        <button class="edit-watch-btn btn !bg-gray-600 hover:!bg-gray-500 !p-2" title="Edit this record">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83l3.75 3.75l1.83-1.83z"/></svg>
+                                        </button>
+                                        <form class="ajax-form delete-watch-form" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" method="POST">
                                             <input type="hidden" name="action" value="delete_watch_instance"><input type="hidden" name="watch_id" value="{{ watch.watch_id }}">
-                                            <button type="submit" data-confirm="Delete this watch record?" data-confirm-btn-text="Delete" data-confirm-btn-class="btn-danger" title="Delete record" class="bg-red-800 hover:bg-red-700 text-white p-2 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41z"/></svg></button>
+                                            <button type="submit" data-confirm="Delete this watch record?" data-confirm-btn-text="Delete" data-confirm-btn-class="btn-danger" title="Delete this record" class="bg-red-800 hover:bg-red-700 text-white p-2 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41z"/></svg></button>
                                         </form>
                                     </div>
                                 </div>
@@ -340,11 +370,21 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.rate-series-form').forEach(form => {
+    // --- Edit Movie Watch History ---
+    document.querySelectorAll('.edit-watch-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const container = button.closest('.history-item-container');
+            if (container) {
+                container.querySelector('.watch-display')?.classList.toggle('hidden');
+                container.querySelector('.edit-watch-form')?.classList.toggle('hidden');
+            }
+        });
+    });
+
+    document.querySelectorAll('.rate-series-form, .edit-watch-form').forEach(form => {
         form.addEventListener('change', (e) => {
-            if (e.target.matches('input[type="radio"]')) {
-                const radio = form.querySelector('input[type=radio]:checked');
-                if (radio) performAjaxSubmit(form);
+            if (e.target.matches('input[type="radio"], input[type="date"]')) {
+                performAjaxSubmit(form);
             }
         });
     });
@@ -352,12 +392,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const performAjaxSubmit = async (form) => {
         const formData = new FormData(form);
 
-        // For series, find the correct master date input for this watch history
         if (form.matches('.watch-action-form.ajax-form') && formData.has('series_watch_id')) {
             const watchId = formData.get('series_watch_id');
             const masterDateInput = document.getElementById(`master_date_${watchId}`);
-            // Always set the date from the master input. Can be empty.
-            // The backend handles empty strings correctly by converting them to None.
             if (masterDateInput) {
                 formData.set('watched_on', masterDateInput.value);
             }
@@ -424,7 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.reload();
         }
         if (action === 'delete_watch_instance') {
-            const elementToRemove = document.querySelector(`[data-watch-id="${data.watch_id}"]`);
+            const elementToRemove = document.querySelector(`.history-item-container[data-watch-id="${data.watch_id}"]`);
             const list = elementToRemove?.closest('#watch-history-list');
             elementToRemove?.remove();
             if (list && list.children.length === 0) {
@@ -440,6 +477,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const formToAnimate = form.closest('.rate-series-form');
             formToAnimate?.classList.add('animate-pulse');
             setTimeout(() => formToAnimate?.classList.remove('animate-pulse'), 1000);
+        }
+        if (action === 'edit_watch_instance') {
+            const container = document.querySelector(`.history-item-container[data-watch-id="${data.watch_id}"]`);
+            if (container) {
+                container.classList.add('!bg-green-800/50');
+                setTimeout(() => container.classList.remove('!bg-green-800/50'), 1500);
+
+                const displayView = container.querySelector('.watch-display');
+                const editView = container.querySelector('.edit-watch-form');
+                const watchedOn = editView.querySelector('input[name="watched_on"]').value;
+                const ratingInput = editView.querySelector('input[name="rating"]:checked');
+                const rating = ratingInput ? parseInt(ratingInput.value, 10) : 0;
+
+                const dateDisplay = displayView.querySelector('strong');
+                if (dateDisplay) dateDisplay.textContent = watchedOn || 'N/A';
+
+                const ratingDisplay = displayView.querySelector('.rating-star');
+                if (ratingDisplay) {
+                    ratingDisplay.innerHTML = `${'★'.repeat(rating)}<span class="text-gray-600">${'★'.repeat(5 - rating)}</span>`;
+                }
+            }
         }
     }
 

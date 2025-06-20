@@ -93,13 +93,24 @@ def item_detail(item_type, item_id):
 @bp.route('/item/<item_type>/<int:item_id>/action', methods=['POST'])
 def item_detail_action(item_type, item_id):
     internal, watchlist = ('movies' if item_type == 'movie' else 'series'), data_manager.load_watchlist()
+
+    # Fetch details to get title and year for watchlist entries
+    details_func = tmdb_api.get_movie_details if item_type == 'movie' else tmdb_api.get_series_details
+    details = details_func(item_id)
+    if not details:
+        flash(f"Could not retrieve details for this {item_type}.", "error")
+        return redirect(url_for(f'main.{internal}'))
+
+    item_title_for_debug = details.get('title', 'Unknown Title')
+    item_year_for_debug = details.get('year', 'Unknown Year')
+
     origin = request.args.get('origin', url_for(f'main.{internal}'))
     action = request.form.get('action')
     sid = str(item_id)
 
     if action == 'plan':
         if not any(i.get('id') == item_id for i in watchlist['planned'][internal]):
-            watchlist['planned'][internal].append({"id": item_id})
+            watchlist['planned'][internal].append({"id": item_id, "title": item_title_for_debug, "year": item_year_for_debug})
             data_manager.save_watchlist(watchlist)
     elif action == 'remove_plan':
         watchlist['planned'][internal] = [i for i in watchlist['planned'][internal] if i.get('id') != item_id]
@@ -107,7 +118,9 @@ def item_detail_action(item_type, item_id):
     elif action == 'watch' and item_type == 'movie':
         watched_on = request.form.get('watched_on') or None
         rating = int(request.form['rating']) if request.form.get('rating') else None
-        new_watch = {"id": item_id, "watch_id": str(uuid.uuid4()), "watched_on": watched_on, "rating": rating}
+        new_watch = {"id": item_id, "title": item_title_for_debug,  # For debugging
+            "year": item_year_for_debug,  # For debugging
+            "watch_id": str(uuid.uuid4()), "watched_on": watched_on, "rating": rating}
         watchlist['watched']['movies'].append(new_watch)
         watchlist['planned']['movies'] = [i for i in watchlist['planned']['movies'] if i.get('id') != item_id]
         data_manager.save_watchlist(watchlist)
@@ -124,12 +137,23 @@ def item_detail_action(item_type, item_id):
         watch_id = request.form.get('watch_id')
         watchlist['watched']['movies'] = [w for w in watchlist['watched']['movies'] if w.get('watch_id') != watch_id]
         data_manager.save_watchlist(watchlist)
+    elif action == 'edit_watch_instance' and item_type == 'movie':
+        watch_id = request.form.get('watch_id')
+        for watch in watchlist['watched']['movies']:
+            if watch.get('watch_id') == watch_id:
+                watch['watched_on'] = request.form.get('watched_on') or None
+                rating_str = request.form.get('rating')
+                watch['rating'] = int(rating_str) if rating_str and rating_str.isdigit() else None
+                data_manager.save_watchlist(watchlist)
+                break
     # --- Series Multi-Watch Actions ---
     elif item_type == 'series':
         series_watch_id = request.form.get('series_watch_id')
 
         if action == 'start_new_series_watch':
-            new_watch = {"series_watch_id": str(uuid.uuid4()), "watched_episodes": {}}
+            new_watch = {"series_watch_id": str(uuid.uuid4()), "watched_episodes": {}, "title": item_title_for_debug,  # For debugging
+                "year": item_year_for_debug  # For debugging
+            }
             # Be explicit about creating the list if it doesn't exist
             if sid not in watchlist['watched']['series']:
                 watchlist['watched']['series'][sid] = []
@@ -216,8 +240,8 @@ def item_detail_action(item_type, item_id):
                 if is_watched_ep:
                     watched_on_date = current_watch.get('watched_episodes', {}).get(eid, {}).get('watched_on')
 
-                response_data.update({'episode_id': eid, 'series_watch_id': series_watch_id, 'is_episode_watched': is_watched_ep, 'watched_on': watched_on_date,
-                    'watched_episode_count': len(current_watch.get('watched_episodes', {})), 'total_episode_count': cache.get("series", {}).get(sid, {}).get("total_episode_count", 0)})
+                response_data.update({'episode_id': eid, 'series_watch_id': series_watch_id, 'is_episode_watched': is_watched_ep, 'watched_on': watched_on_date, 'watched_episode_count': len(current_watch.get('watched_episodes', {})),
+                                      'total_episode_count': cache.get("series", {}).get(sid, {}).get("total_episode_count", 0)})
     elif item_type == 'movie':
         is_planned = any(i.get('id') == item_id for i in watchlist['planned']['movies'])
         watch_history = [i for i in watchlist['watched']['movies'] if i.get('id') == item_id]
@@ -226,6 +250,9 @@ def item_detail_action(item_type, item_id):
             response_data['new_watch_record'] = sorted(watch_history, key=lambda x: x.get('watched_on') or '0001-01-01', reverse=True)[0]
         if action == 'delete_watch_instance':
             response_data['watch_id'] = request.form.get('watch_id')
+        if action == 'edit_watch_instance':
+            response_data['watch_id'] = request.form.get('watch_id')
+            response_data['message'] = 'Watch record updated.'
     return jsonify(response_data)
 
 
