@@ -149,7 +149,7 @@
         {% endif %}
 
         <div class="space-y-4">
-        {% for watch in watch_histories %}
+        {% for watch in watch_histories | reverse %}
         {% set watched_episode_ids = watch.watched_episodes.keys()|list %}
         {% set watched_count = watched_episode_ids|length %}
         {% set total_count = item.total_episode_count %}

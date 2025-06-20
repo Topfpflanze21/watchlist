@@ -87,9 +87,6 @@ def item_detail(item_type, item_id):
         is_planned = any(i.get('id') == item_id for i in watchlist['planned']['series'])
         is_watched = bool(watch_histories)
 
-        # Sort watch histories by most recent activity first
-        watch_histories.sort(key=lambda w: max((e.get('watched_on') for e in w.get('watched_episodes', {}).values() if e.get('watched_on')), default='0001-01-01'), reverse=True)
-
         return render_template('details.html', item=item_to_show, is_planned=is_planned, is_watched=is_watched, today=today, origin=origin, watch_histories=watch_histories, internal_type=internal_type)
 
 
