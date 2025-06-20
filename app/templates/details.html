@@ -75,7 +75,13 @@
             {% endif %}
 
             <div class="space-y-4 my-4">
-                <p><strong class="font-semibold text-gray-300">Main Actors:</strong> <span class="text-gray-400">{{ item.actors }}</span></p>
+                <p><strong class="font-semibold text-gray-300">Main Actors:</strong> <span class="text-gray-400">
+                    {% if item.actors %}
+                        {% for actor in item.actors.split(',') %}
+                            <a href="https://www.themoviedb.org/search?query={{ actor.strip()|urlencode }}" target="_blank" class="hover:text-white underline">{{ actor.strip() }}</a>{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </span></p>
                 <p><strong class="font-semibold text-gray-300">Plot:</strong> <span class="text-gray-400 mt-1">{{ item.plot }}</span></p>
             </div>
 
