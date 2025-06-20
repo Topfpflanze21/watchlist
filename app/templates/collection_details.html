@@ -1,0 +1,60 @@
+{# /app/templates/collection_details.html #}
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-6">
+    <a href="{{ request.referrer or url_for('main.index') }}" class="inline-flex items-center text-gray-400 hover:text-white transition-colors group">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 h-5 w-5 transform group-hover:-translate-x-1 transition-transform"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back
+    </a>
+</div>
+
+<div class="md:flex gap-8 mb-12">
+    {% if collection.poster_url %}
+    <div class="md:w-1/4 md:max-w-xs flex-shrink-0">
+         <img src="{{ collection.poster_url }}" alt="Poster for {{ collection.name }}" class="w-full h-auto object-cover rounded-md shadow-lg" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';">
+    </div>
+    {% endif %}
+    <div class="flex-grow mt-6 md:mt-0">
+        <h1 class="text-4xl font-bold mb-4">{{ collection.name }}</h1>
+        {% if collection.overview %}
+        <p class="text-gray-300">{{ collection.overview }}</p>
+        {% endif %}
+    </div>
+</div>
+
+
+{% if collection.parts %}
+<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+    {% for item in collection.parts %}
+    <div class="card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl relative">
+        <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="absolute inset-0 z-10"></a>
+        <div class="relative">
+            {% if item.status == 'planned' %}
+                <div class="absolute top-2 right-2 z-20" title="In Plan to Watch">
+                    <div class="bg-blue-600 bg-opacity-80 rounded-full p-2 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                    </div>
+                </div>
+            {% elif item.status == 'watched' %}
+                <div class="absolute top-2 right-2 z-20" title="Already Watched or In Progress">
+                    <div class="bg-green-600 bg-opacity-80 rounded-full p-2 flex items-center justify-center">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </div>
+                </div>
+            {% endif %}
+
+            <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text={{ item.title|replace(' ', '+') }}';" class="w-full h-auto object-cover aspect-[2/3]">
+            <div class="p-4">
+                <h3 class="font-bold text-lg truncate">{{ item.title }}</h3>
+                <p class="text-sm text-gray-400">{{ item.year }}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center card p-8">
+    <h3 class="text-2xl font-bold">No movies found for this collection.</h3>
+</div>
+{% endif %}
+{% endblock %}

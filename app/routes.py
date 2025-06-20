@@ -295,6 +295,28 @@ def show_search_results():
     return render_template('search_results.html', query=query, results=results)
 
 
+@bp.route('/collection/<int:collection_id>')
+def collection_details(collection_id):
+    collection = tmdb_api.get_collection_details(collection_id)
+    if not collection:
+        flash("Could not retrieve collection details.", "error")
+        return redirect(url_for('main.index'))
+
+    watchlist = data_manager.load_watchlist()
+    p_m_ids = {i['id'] for i in watchlist['planned']['movies']}
+    w_m_ids = {i['id'] for i in watchlist['watched']['movies']}
+
+    for item in collection.get('parts', []):
+        item_id = item['id']
+        if item_id in w_m_ids:
+            item['status'] = 'watched'
+        elif item_id in p_m_ids:
+            item['status'] = 'planned'
+        else:
+            item['status'] = None
+    return render_template('collection_details.html', collection=collection)
+
+
 @bp.route('/stats')
 def stats():
     watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()

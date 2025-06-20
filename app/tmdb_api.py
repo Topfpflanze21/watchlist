@@ -33,9 +33,11 @@ def get_movie_details(movie_id):
         d = res.json()
         image_url = current_app.config['TMDB_IMAGE_URL']
         director = next((p['name'] for p in d.get("credits", {}).get("crew", []) if p.get('job') == 'Director'), "")
+        collection = d.get('belongs_to_collection')
 
         data = {"id": d.get("id"), "title": d.get("title"), "year": d.get("release_date", "")[:4], "poster_url": f"{image_url}{d.get('poster_path')}" if d.get('poster_path') else "", "genre": ", ".join([g['name'] for g in d.get("genres", [])]),
             "actors": ", ".join([c['name'] for c in d.get("credits", {}).get("cast", [])[:5]]), "director": director, "plot": d.get("overview"), "runtime": d.get('runtime'), 'trailer_key': find_trailer_key(d.get("videos", {}).get("results", [])),
+            'collection': collection,
             'recommendations': [{"id": r.get("id"), "title": r.get("title"), "type": "movie", "poster_url": f"{image_url}{r.get('poster_path')}", "year": r.get("release_date", "")[:4], } for r in d.get("recommendations", {}).get("results", []) if
                                    r.get('poster_path')][:12]}
 
@@ -48,6 +50,29 @@ def get_movie_details(movie_id):
         return data
     except requests.RequestException as e:
         print(f"Error fetching movie details for ID {movie_id}: {e}")
+        return None
+
+
+def get_collection_details(collection_id):
+    """Fetches details for a movie collection from TMDB."""
+    api_key = current_app.config['TMDB_API_KEY']
+    if not api_key or api_key == "YOUR_API_KEY_HERE":
+        return None
+
+    try:
+        url = f"{current_app.config['TMDB_BASE_URL']}/collection/{collection_id}?api_key={api_key}"
+        res = requests.get(url)
+        res.raise_for_status()
+        d = res.json()
+        image_url = current_app.config['TMDB_IMAGE_URL']
+
+        parts = sorted(d.get('parts', []), key=lambda x: x.get('release_date') or '9999-99-99')
+
+        data = {"id": d.get("id"), "name": d.get("name"), "overview": d.get("overview"), "poster_url": f"{image_url}{d.get('poster_path')}" if d.get('poster_path') else "",
+            "parts": [{"id": p.get("id"), "title": p.get("title"), "year": p.get("release_date", "")[:4], "poster_url": f"{image_url}{p.get('poster_path')}" if p.get('poster_path') else "", "type": "movie"} for p in parts if p.get('poster_path')]}
+        return data
+    except requests.RequestException as e:
+        print(f"Error fetching collection details for ID {collection_id}: {e}")
         return None
 
 
