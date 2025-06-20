@@ -99,9 +99,22 @@
         {% endwith %}
         {% block content %}{% endblock %}
     </main>
+
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[999] hidden p-4">
+        <div class="card p-8 rounded-lg shadow-2xl relative w-full max-w-md text-center">
+             <h3 id="modal-title" class="text-2xl font-bold mb-4 text-white">Confirmation</h3>
+             <p id="modal-body" class="text-gray-300 mb-8">Are you sure you want to proceed?</p>
+             <div class="flex justify-center gap-4">
+                <button id="modal-cancel-btn" class="btn !bg-gray-600 hover:!bg-gray-500 px-8">Cancel</button>
+                <button id="modal-confirm-btn" class="btn btn-danger px-8">Confirm</button>
+             </div>
+        </div>
+    </div>
+
     <footer class="text-center p-4 text-gray-500 text-sm">
         <p>Movie Tracker App © 2025</p>
     </footer>
+
     <script>
         function showTab(section, type, clickedButton) {
             const contentPanels = document.querySelectorAll(`div[id^="${section}-"][class~="tab-content"]`);
@@ -112,6 +125,49 @@
             tabButtons.forEach(button => { button.classList.remove('active'); });
             clickedButton.classList.add('active');
         }
+
+        const confirmationModal = {
+            modal: document.getElementById('confirmation-modal'),
+            title: document.getElementById('modal-title'),
+            body: document.getElementById('modal-body'),
+            confirmBtn: document.getElementById('modal-confirm-btn'),
+            cancelBtn: document.getElementById('modal-cancel-btn'),
+            confirmCallback: null,
+
+            show({ message, onConfirm, title = 'Confirmation', confirmText = 'Confirm', btnClass = 'btn' }) {
+                this.body.textContent = message;
+                this.title.textContent = title;
+                this.confirmBtn.textContent = confirmText;
+                this.confirmCallback = onConfirm;
+                // Set the button's style dynamically
+                this.confirmBtn.className = `btn px-8 ${btnClass}`;
+                this.modal.classList.remove('hidden');
+            },
+
+            hide() {
+                this.modal.classList.add('hidden');
+                this.confirmCallback = null;
+            },
+
+            init() {
+                this.confirmBtn.addEventListener('click', () => {
+                    if (this.confirmCallback) {
+                        this.confirmCallback();
+                    }
+                    this.hide();
+                });
+                this.cancelBtn.addEventListener('click', () => this.hide());
+                this.modal.addEventListener('click', (e) => {
+                    if (e.target === this.modal) this.hide();
+                });
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape' && !this.modal.classList.contains('hidden')) {
+                        this.hide();
+                    }
+                });
+            }
+        };
+        confirmationModal.init();
     </script>
 </body>
 </html>

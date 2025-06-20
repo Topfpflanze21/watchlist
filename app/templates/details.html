@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="mb-6">
-    <a href="{{ origin or url_for('main.' ~ internal_type) }}" class="inline-flex items-center text-gray-400 hover:text-white transition-colors group">
+    <button onclick="history.back()" class="inline-flex items-center text-gray-400 hover:text-white transition-colors group">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 h-5 w-5 transform group-hover:-translate-x-1 transition-transform"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
-        Back to {{ internal_type|capitalize }}
-    </a>
+        Back
+    </button>
 </div>
 <div class="card rounded-lg overflow-hidden">
     <div class="md:flex">
@@ -24,7 +24,8 @@
                     </button>
                     {% endif %}
 
-                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="flex">
+                    <div id="plan-form-container">
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="flex ajax-form">
                         {% if is_planned %}
                             <input type="hidden" name="action" value="remove_plan">
                             <button type="submit" class="btn !bg-blue-600 hover:!bg-blue-500 flex-shrink-0 flex items-center !py-2 !px-3" title="In 'Plan to Watch'. Click to remove.">
@@ -37,11 +38,17 @@
                              </button>
                         {% endif %}
                     </form>
+                    </div>
 
                     {% if is_watched or is_planned %}
-                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="flex" onsubmit="return confirm('Are you sure you want to delete this item AND all its history? This action cannot be undone.');">
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="flex">
                         <input type="hidden" name="action" value="delete_all">
-                        <button type="submit" class="btn btn-danger flex-shrink-0 flex items-center !py-2 !px-3" title="Delete all records for this item">
+                        <button type="submit"
+                                data-confirm="Are you sure you want to delete '{{ item.title }}'? This action is permanent and cannot be undone."
+                                data-confirm-btn-text="Delete"
+                                data-confirm-btn-class="btn-danger"
+                                class="btn btn-danger flex-shrink-0 flex items-center !py-2 !px-3"
+                                title="Delete all records for this item">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                         </button>
                     </form>
@@ -78,34 +85,34 @@
 
             {% if item.type == 'movie' %}
                 <div class="flex-grow flex flex-col mt-4">
-                    <div class="flex-grow">
-                    {% if watch_history %}
-                    <details class="space-y-4 mb-4" open>
-                        <summary class="text-xl font-bold text-white border-b border-gray-600 pb-2 flex items-center justify-between">
-                            <span>Watch History</span>
-                            <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
-                        </summary>
-                        <div class="pt-3 space-y-3">
-                            {% for watch in watch_history %}
-                            <div class="flex items-center justify-between gap-x-4 p-3 bg-gray-800 rounded-lg">
-                                <div class="flex items-center gap-x-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                    <p class="text-sm text-gray-200">Watched on <strong class="font-semibold text-white">{{ watch.watched_on }}</strong></p>
+                    <div class="flex-grow" id="movie-history-container">
+                        {% if watch_history %}
+                        <details class="space-y-4 mb-4" open>
+                            <summary class="text-xl font-bold text-white border-b border-gray-600 pb-2 flex items-center justify-between">
+                                <span>Watch History</span>
+                                <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
+                            </summary>
+                            <div id="watch-history-list" class="pt-3 space-y-3">
+                                {% for watch in watch_history %}
+                                <div class="flex items-center justify-between gap-x-4 p-3 bg-gray-800 rounded-lg" data-watch-id="{{ watch.watch_id }}">
+                                    <div class="flex items-center gap-x-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                        <p class="text-sm text-gray-200">Watched on <strong class="font-semibold text-white">{{ watch.watched_on }}</strong></p>
+                                    </div>
+                                    <div class="flex items-center gap-x-4">
+                                        <div class="flex-shrink-0 rating-star">{{ '★' * watch.rating }}<span class="text-gray-600">{{ '★' * (5 - watch.rating) }}</span></div>
+                                        <form class="ajax-form" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" method="POST">
+                                            <input type="hidden" name="action" value="delete_watch_instance"><input type="hidden" name="watch_id" value="{{ watch.watch_id }}">
+                                            <button type="submit" data-confirm="Delete this watch record?" data-confirm-btn-text="Delete" data-confirm-btn-class="btn-danger" title="Delete record" class="bg-red-800 hover:bg-red-700 text-white p-2 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41z"/></svg></button>
+                                        </form>
+                                    </div>
                                 </div>
-                                <div class="flex items-center gap-x-4">
-                                    <div class="flex-shrink-0 rating-star">{{ '★' * watch.rating }}<span class="text-gray-600">{{ '★' * (5 - watch.rating) }}</span></div>
-                                    <form action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" method="POST" onsubmit="return confirm('Delete this watch record?');">
-                                        <input type="hidden" name="action" value="delete_watch_instance"><input type="hidden" name="watch_id" value="{{ watch.watch_id }}">
-                                        <button type="submit" title="Delete record" class="bg-red-800 hover:bg-red-700 text-white p-2 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41z"/></svg></button>
-                                    </form>
-                                </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
-                        </div>
-                    </details>
-                    {% endif %}
+                        </details>
+                        {% endif %}
                     </div>
-                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="space-y-4 border-2 border-gray-600 rounded-lg p-4 bg-gray-800 mt-auto">
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="ajax-form space-y-4 border-2 border-gray-600 rounded-lg p-4 bg-gray-800 mt-auto">
                          <input type="hidden" name="action" value="watch">
                         <h3 class="font-bold text-lg text-center text-white">{% if is_watched %}Add New Watch Record{% else %}I've Watched This{% endif %}</h3>
                         <div><label for="watched_on" class="block text-sm font-medium text-gray-300 mb-1">Watched On</label><input type="date" name="watched_on" required value="{{ today }}" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 text-white" style="color-scheme: dark;"></div>
@@ -129,33 +136,33 @@
                     <h2 class="text-2xl font-bold">Episode Tracker</h2>
                     {% if total_count > 0 %}
                         {% if watched_count < total_count %}
-                        <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" onsubmit="return confirm('Are you sure you want to mark all episodes as watched?');" class="flex items-center gap-2 watch-action-form">
+                        <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="flex items-center gap-2 watch-action-form">
                             <input type="hidden" name="action" value="watch_all_episodes">
                             <input type="hidden" name="watched_on" value="">
-                            <button type="submit" class="btn !bg-green-700 hover:!bg-green-600 !py-1 !px-3 text-sm whitespace-nowrap">Watch All</button>
+                            <button type="submit" data-confirm="Are you sure you want to mark all episodes as watched?" data-confirm-btn-text="Watch All" data-confirm-btn-class="!bg-green-700 hover:!bg-green-600" class="btn !bg-green-700 hover:!bg-green-600 !py-1 !px-3 text-sm whitespace-nowrap">Watch All</button>
                         </form>
                         {% elif watched_count > 0 %}
-                        <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" onsubmit="return confirm('Are you sure you want to mark all episodes as unwatched?');" class="flex items-center gap-2">
+                        <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="flex items-center gap-2">
                             <input type="hidden" name="action" value="unwatch_all_episodes">
-                            <button type="submit" class="btn btn-danger !py-1 !px-3 text-sm whitespace-nowrap">Unwatch All</button>
+                            <button type="submit" data-confirm="Are you sure you want to mark all episodes as unwatched?" data-confirm-btn-text="Unwatch All" data-confirm-btn-class="btn-danger" class="btn btn-danger !py-1 !px-3 text-sm whitespace-nowrap">Unwatch All</button>
                         </form>
                         {% endif %}
                     {% endif %}
                 </div>
                 {% if total_count > 0 %}
                     {% set progress_percent = (watched_count / total_count * 100)|round %}
-                    <div class="w-full bg-gray-700 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ progress_percent }}%"></div></div>
-                    <p class="text-sm text-gray-400 mt-1">{{ watched_count }} of {{ total_count }} episodes watched.</p>
+                    <div class="w-full bg-gray-700 rounded-full h-2.5"><div id="series-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: {{ progress_percent }}%"></div></div>
+                    <p id="series-progress-text" class="text-sm text-gray-400 mt-1">{{ watched_count }} of {{ total_count }} episodes watched.</p>
                     <div class="my-4">
                         <label for="master_date" class="block text-sm font-medium text-gray-300 mb-1">Date for Watch Actions</label>
                         <input type="date" id="master_date" value="{{ today }}" class="bg-gray-700 border-gray-600 rounded-lg p-2 text-white" style="color-scheme: dark;">
                     </div>
                 {% endif %}
             </div>
-            <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="space-y-2 border border-gray-600 rounded-lg p-2 bg-gray-800 flex-shrink-0 w-56">
+            <form id="rate-series-form" method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="ajax-form space-y-2 border border-gray-600 rounded-lg p-2 bg-gray-800 flex-shrink-0 w-56">
                 <input type="hidden" name="action" value="rate_series"><h3 class="font-bold text-sm text-center text-white">Rate This Series</h3><div class="bg-gray-700 rounded-lg"><div class="rating-group !justify-around">
                     {% set current_rating = watched_series_data.get('rating')|int if watched_series_data else 0 %}
-                    {% for i in range(5, 0, -1) %}<input type="radio" id="rating-{{ i }}" name="rating" value="{{ i }}" required {% if i == current_rating %}checked{% endif %} onchange="this.form.submit()"><label for="rating-{{ i }}" class="!p-1"><span class="star !text-xl">★</span></label>{% endfor %}
+                    {% for i in range(5, 0, -1) %}<input type="radio" id="rating-{{ i }}" name="rating" value="{{ i }}" required {% if i == current_rating %}checked{% endif %}><label for="rating-{{ i }}" class="!p-1"><span class="star !text-xl">★</span></label>{% endfor %}
                 </div></div>
             </form>
         </div>
@@ -172,22 +179,22 @@
         {% endfor %}
 
         {% for season in item.seasons %}{% if season.episodes %}{% set watched_in_season = season.episodes|selectattr('id', 'in', watched_episode_ids)|list %}<details class="bg-gray-800 rounded-lg" {% if season.season_number == first_unwatched_season.number %}open{% endif %}><summary class="p-3 font-bold text-lg cursor-pointer flex justify-between items-center hover:bg-gray-700 rounded-t-lg transition-colors">
-            <span>{{ season.name }} ({{ watched_in_season|length }} / {{ season.episode_count }})</span>
+            <span data-season-name="{{ season.name }}">{{ season.name }} ({{ watched_in_season|length }} / {{ season.episode_count }})</span>
             <div class="flex-grow"></div>
             <div class="flex items-center gap-4">
                 {% if season.episode_count > 0 %}
                     {% if watched_in_season|length < season.episode_count %}
-                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="watch-action-form" onsubmit="event.stopPropagation(); return confirm('Mark all episodes in this season as watched?');">
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="watch-action-form">
                         <input type="hidden" name="action" value="watch_season">
                         <input type="hidden" name="season_number" value="{{ season.season_number }}">
                         <input type="hidden" name="watched_on" value="">
-                        <button type="submit" class="btn !py-1 !px-2 text-xs">Watch Season</button>
+                        <button type="submit" data-confirm="Mark all episodes in this season as watched?" data-confirm-btn-text="Watch Season" onclick="event.stopPropagation()" class="btn !py-1 !px-2 text-xs">Watch Season</button>
                     </form>
                     {% else %}
-                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" onsubmit="event.stopPropagation(); return confirm('Mark all episodes in this season as unwatched?');">
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}">
                         <input type="hidden" name="action" value="unwatch_season">
                         <input type="hidden" name="season_number" value="{{ season.season_number }}">
-                        <button type="submit" class="btn btn-danger !py-1 !px-2 text-xs">Unwatch Season</button>
+                        <button type="submit" data-confirm="Mark all episodes in this season as unwatched?" data-confirm-btn-text="Unwatch Season" data-confirm-btn-class="btn-danger" onclick="event.stopPropagation()" class="btn btn-danger !py-1 !px-2 text-xs">Unwatch Season</button>
                     </form>
                     {% endif %}
                 {% endif %}
@@ -203,7 +210,7 @@
                     {% if episode.id in watched_episode_ids %}
                     <span class="text-xs text-gray-400 whitespace-nowrap">{{ watched_series_data.watched_episodes[episode.id].watched_on }}</span>
                     {% endif %}
-                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="ml-2 watch-action-form">
+                    <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=origin) }}" class="ml-2 watch-action-form ajax-form">
                         <input type="hidden" name="action" value="toggle_episode">
                         <input type="hidden" name="episode_id" value="{{ episode.id }}">
                         <input type="hidden" name="watched_on" value="">
@@ -218,15 +225,11 @@
         document.addEventListener('DOMContentLoaded', function() {
             const masterDate = document.getElementById('master_date');
             if (!masterDate) return;
-
-            const forms = document.querySelectorAll('.watch-action-form');
-
+            const forms = document.querySelectorAll('.watch-action-form:not(.ajax-form)');
             forms.forEach(form => {
                 const watchedOnInput = form.querySelector('input[name="watched_on"]');
                 if (watchedOnInput) {
-                    form.addEventListener('submit', function() {
-                        watchedOnInput.value = masterDate.value;
-                    });
+                    form.addEventListener('submit', function() { watchedOnInput.value = masterDate.value; });
                 }
             });
         });
@@ -287,4 +290,227 @@
     });
 </script>
 {% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const ratingForm = document.getElementById('rate-series-form');
+    if (ratingForm) {
+        ratingForm.addEventListener('change', (e) => {
+            if (e.target.matches('input[type="radio"]')) {
+                ratingForm.requestSubmit();
+            }
+        });
+    }
+
+    const performAjaxSubmit = async (form) => {
+        const formData = new FormData(form);
+
+        if (form.matches('.watch-action-form')) {
+            const masterDate = document.getElementById('master_date')?.value;
+            if (masterDate) formData.set('watched_on', masterDate);
+        }
+
+        console.log(`[AJAX] Submitting action: ${formData.get('action')}`);
+
+        try {
+            const url = form.getAttribute('action');
+            const response = await fetch(url, {
+                method: 'POST',
+                body: new URLSearchParams(formData)
+            });
+
+            if (!response.ok) throw new Error(`Network response was not ok. Status: ${response.status}`);
+
+            const data = await response.json();
+            console.log('[AJAX] Received from server:', data);
+
+            if (data.status === 'success') {
+                handleSuccess(form, data);
+            } else {
+                console.error('[AJAX] Action failed on server:', data);
+            }
+        } catch (error) {
+            console.error('[AJAX] Fetch error:', error);
+            alert('An error occurred. Please check the console (F12) for details.');
+        }
+    };
+
+    document.body.addEventListener('submit', (e) => {
+        const form = e.target;
+        const submitter = e.submitter || document.activeElement;
+        const isAjax = form.matches('.ajax-form');
+
+        if (submitter && submitter.dataset.confirm) {
+            e.preventDefault();
+            confirmationModal.show({
+                message: submitter.dataset.confirm,
+                confirmText: submitter.dataset.confirmBtnText || 'Confirm',
+                btnClass: submitter.dataset.confirmBtnClass,
+                onConfirm: () => {
+                    if (isAjax) {
+                        performAjaxSubmit(form);
+                    } else {
+                        form.submit();
+                    }
+                }
+            });
+        } else if (isAjax) {
+            e.preventDefault();
+            performAjaxSubmit(form);
+        }
+    });
+
+
+    function handleSuccess(form, data) {
+        const action = data.action;
+
+        if (action === 'plan' || action === 'remove_plan') updatePlanButton(data.is_planned);
+        if (action === 'toggle_episode') {
+            updateEpisodeUI(form, data);
+            updateSeriesProgress(data);
+        }
+        if (action === 'watch') {
+            updateMovieWatchUI(form, data);
+            const radio = form.querySelector('input[type=radio]:checked');
+            if(radio) radio.checked = false;
+        }
+        if (action === 'delete_watch_instance') {
+            const elementToRemove = document.querySelector(`[data-watch-id="${data.watch_id}"]`);
+            const list = elementToRemove?.closest('#watch-history-list');
+            elementToRemove?.remove();
+            if (list && list.children.length === 0) {
+                list.closest('details')?.remove();
+                const addRecordForm = document.querySelector('input[name="action"][value="watch"]')?.closest('form');
+                if (addRecordForm) {
+                    addRecordForm.querySelector('h3').textContent = "I've Watched This";
+                    addRecordForm.querySelector('button[type="submit"]').textContent = "Add to 'Watched'";
+                }
+            }
+        }
+        if (action === 'rate_series') {
+            const formToAnimate = document.getElementById('rate-series-form');
+            formToAnimate?.classList.add('animate-pulse');
+            setTimeout(() => formToAnimate?.classList.remove('animate-pulse'), 1000);
+        }
+    }
+
+    function updatePlanButton(isPlanned) {
+        const container = document.getElementById('plan-form-container');
+        if (!container) return;
+
+        const button = container.querySelector('button');
+        const svg = button?.querySelector('svg');
+        const actionInput = container.querySelector('input[name="action"]');
+        if (!button || !svg || !actionInput) return;
+
+        if (isPlanned) {
+            actionInput.value = 'remove_plan';
+            button.title = "In 'Plan to Watch'. Click to remove.";
+            button.className = 'btn !bg-blue-600 hover:!bg-blue-500 flex-shrink-0 flex items-center !py-2 !px-3';
+            svg.setAttribute('fill', 'currentColor');
+            svg.removeAttribute('stroke');
+        } else {
+            actionInput.value = 'plan';
+            button.title = "Add to 'Plan to Watch'";
+            button.className = 'btn !bg-gray-700 hover:!bg-gray-600 flex-shrink-0 flex items-center !py-2 !px-3';
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+        }
+    }
+
+    function updateEpisodeUI(form, data) {
+        const episodeDiv = form.closest('.flex.items-center.justify-between');
+        if (!episodeDiv) return;
+
+        const button = form.querySelector('button');
+        let watchedOnSpan = episodeDiv.querySelector('.text-xs.text-gray-400.whitespace-nowrap');
+
+        if (data.is_episode_watched) {
+            episodeDiv.classList.replace('bg-gray-900/30', 'bg-green-900/40');
+            if (button) button.textContent = 'Unwatch';
+            button?.classList.remove('!bg-blue-600', 'hover:!bg-blue-700');
+            button?.classList.add('!bg-red-600', 'hover:!bg-red-700');
+            if (!watchedOnSpan) {
+                watchedOnSpan = document.createElement('span');
+                watchedOnSpan.className = 'text-xs text-gray-400 whitespace-nowrap';
+                form.insertAdjacentElement('beforebegin', watchedOnSpan);
+            }
+            if(watchedOnSpan) watchedOnSpan.textContent = data.watched_on;
+        } else {
+            episodeDiv.classList.replace('bg-green-900/40', 'bg-gray-900/30');
+            if (button) button.textContent = 'Watch';
+            button?.classList.remove('!bg-red-600', 'hover:!bg-red-700');
+            button?.classList.add('!bg-blue-600', 'hover:!bg-blue-700');
+            watchedOnSpan?.remove();
+        }
+    }
+
+    function updateSeriesProgress(data) {
+        const progressText = document.getElementById('series-progress-text');
+        const progressBar = document.getElementById('series-progress-bar');
+        if(progressText) progressText.textContent = `${data.watched_episode_count} of ${data.total_episode_count} episodes watched.`;
+        if(progressBar) {
+            const percent = data.total_episode_count > 0 ? (data.watched_episode_count / data.total_episode_count * 100) : 0;
+            progressBar.style.width = `${percent}%`;
+        }
+        document.querySelectorAll('summary > span[data-season-name]').forEach(span => {
+            const seasonDetails = span.closest('details');
+            if (!seasonDetails) return;
+            const watchedInSeason = seasonDetails.querySelectorAll('.bg-green-900\\/40').length;
+            const totalInSeason = seasonDetails.querySelectorAll('input[name="episode_id"]').length;
+            span.textContent = `${span.dataset.seasonName} (${watchedInSeason} / ${totalInSeason})`;
+        });
+    }
+
+    function updateMovieWatchUI(form, data) {
+        if (!data.new_watch_record) return;
+
+        let list = document.getElementById('watch-history-list');
+        if (!list) {
+            const historyContainer = document.getElementById('movie-history-container');
+            if (historyContainer) {
+                historyContainer.innerHTML = `
+                    <details class="space-y-4 mb-4" open>
+                        <summary class="text-xl font-bold text-white border-b border-gray-600 pb-2 flex items-center justify-between">
+                            <span>Watch History</span>
+                            <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
+                        </summary>
+                        <div id="watch-history-list" class="pt-3 space-y-3"></div>
+                    </details>`;
+                list = document.getElementById('watch-history-list');
+            } else {
+                return console.error('[AJAX] Cannot find #movie-history-container to create history section.');
+            }
+        }
+
+        const watch = data.new_watch_record;
+        const stars = '★'.repeat(watch.rating) + '<span class="text-gray-600">' + '★'.repeat(5 - watch.rating) + '</span>';
+        const formActionUrl = form.getAttribute('action');
+        const newRecordHtml = `
+            <div class="flex items-center justify-between gap-x-4 p-3 bg-gray-800 rounded-lg" data-watch-id="${watch.watch_id}">
+                <div class="flex items-center gap-x-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 flex-shrink-0"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <p class="text-sm text-gray-200">Watched on <strong class="font-semibold text-white">${watch.watched_on}</strong></p>
+                </div>
+                <div class="flex items-center gap-x-4">
+                    <div class="flex-shrink-0 rating-star">${stars}</div>
+                    <form class="ajax-form" action="${formActionUrl}" method="POST">
+                        <input type="hidden" name="action" value="delete_watch_instance"><input type="hidden" name="watch_id" value="${watch.watch_id}">
+                        <button type="submit" data-confirm="Delete this watch record?" data-confirm-btn-text="Delete" data-confirm-btn-class="btn-danger" title="Delete record" class="bg-red-800 hover:bg-red-700 text-white p-2 rounded-full transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12L19 6.41z"/></svg></button>
+                    </form>
+                </div>
+            </div>`;
+
+        if (list) list.insertAdjacentHTML('afterbegin', newRecordHtml);
+
+        const addRecordForm = document.querySelector('input[name="action"][value="watch"]')?.closest('form');
+        if (addRecordForm) {
+            addRecordForm.querySelector('h3').textContent = 'Add New Watch Record';
+            addRecordForm.querySelector('button[type="submit"]').textContent = 'Add Watch Record';
+        }
+        updatePlanButton(data.is_planned);
+    }
+});
+</script>
+
 {% endblock %}
