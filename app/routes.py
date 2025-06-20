@@ -119,8 +119,8 @@ def item_detail_action(item_type, item_id):
         watched_on = request.form.get('watched_on') or None
         rating = int(request.form['rating']) if request.form.get('rating') else None
         new_watch = {"id": item_id, "title": item_title_for_debug,  # For debugging
-            "year": item_year_for_debug,  # For debugging
-            "watch_id": str(uuid.uuid4()), "watched_on": watched_on, "rating": rating}
+                     "year": item_year_for_debug,  # For debugging
+                     "watch_id": str(uuid.uuid4()), "watched_on": watched_on, "rating": rating}
         watchlist['watched']['movies'].append(new_watch)
         watchlist['planned']['movies'] = [i for i in watchlist['planned']['movies'] if i.get('id') != item_id]
         data_manager.save_watchlist(watchlist)
@@ -152,8 +152,8 @@ def item_detail_action(item_type, item_id):
 
         if action == 'start_new_series_watch':
             new_watch = {"series_watch_id": str(uuid.uuid4()), "watched_episodes": {}, "title": item_title_for_debug,  # For debugging
-                "year": item_year_for_debug  # For debugging
-            }
+                         "year": item_year_for_debug  # For debugging
+                         }
             # Be explicit about creating the list if it doesn't exist
             if sid not in watchlist['watched']['series']:
                 watchlist['watched']['series'][sid] = []
@@ -315,6 +315,40 @@ def collection_details(collection_id):
         else:
             item['status'] = None
     return render_template('collection_details.html', collection=collection)
+
+
+@bp.route('/collections')
+def collections():
+    watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
+    collections_dict = {}
+    watched_movies = watchlist.get('watched', {}).get('movies', [])
+    w_m_ids = {m['id'] for m in watched_movies}
+
+    for movie_watch in watched_movies:
+        movie_id_str = str(movie_watch.get('id'))
+        if movie_id_str in cache.get('movies', {}):
+            movie_meta = cache['movies'][movie_id_str]
+            collection_info = movie_meta.get('collection')
+
+            if collection_info and collection_info.get('id'):
+                collection_id = collection_info['id']
+                if collection_id not in collections_dict:
+                    full_collection_details = tmdb_api.get_collection_details(collection_id)
+                    if full_collection_details and full_collection_details.get('parts'):
+                        parts = full_collection_details.get('parts', [])
+                        total_count = len(parts)
+                        watched_count = sum(1 for part in parts if part.get('id') in w_m_ids)
+
+                        image_url = current_app.config['TMDB_IMAGE_URL']
+                        poster_path = collection_info.get('poster_path')
+                        collections_dict[collection_id] = {'id': collection_id, 'name': collection_info.get('name'), 'poster_url': f"{image_url}{poster_path}" if poster_path else "", 'watched_count': watched_count, 'total_count': total_count}
+
+    # Separate collections into completed and in-progress lists
+    all_collections = sorted(collections_dict.values(), key=lambda x: x.get('name', ''))
+    completed_collections = [c for c in all_collections if c['watched_count'] == c['total_count']]
+    in_progress_collections = [c for c in all_collections if c['watched_count'] != c['total_count']]
+
+    return render_template('collections_list.html', completed_collections=completed_collections, in_progress_collections=in_progress_collections)
 
 
 @bp.route('/stats')

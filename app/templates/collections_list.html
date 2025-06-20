@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if not in_progress_collections and not completed_collections %}
+<div class="text-center card p-8">
+    <h3 class="text-2xl font-bold">No Collections Found</h3>
+    <p class="text-gray-400 mt-2">When you watch a movie that is part of a collection (e.g., Star Wars), the collection will appear here.</p>
+    <a href="{{ url_for('main.index') }}" class="btn mt-6">Back to Home</a>
+</div>
+{% else %}
+<div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex-grow">
+        <label for="search-input" class="sr-only">Search</label>
+        <input type="text" id="search-input" placeholder="Search by collection title..." class="w-full max-w-sm bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:ring-blue-500 focus:border-blue-500">
+    </div>
+    <div class="flex-shrink-0">
+        <label for="sort-select" class="mr-2 text-gray-300">Sort by:</label>
+        <select id="sort-select" class="bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white">
+            <option value="title_asc">Title (A-Z)</option>
+            <option value="title_desc">Title (Z-A)</option>
+            <option value="progress_desc">Progress (High to Low)</option>
+            <option value="progress_asc">Progress (Low to High)</option>
+        </select>
+    </div>
+</div>
+
+<details id="inprogress-section" class="mb-8" open>
+    <summary class="text-3xl font-bold border-b-2 border-blue-500 pb-2 mb-6 flex items-center justify-between">
+        <span>In Progress (<span class="count">{{ in_progress_collections|length }}</span>)</span>
+        <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
+    </summary>
+    <div class="pt-2">
+        {% if in_progress_collections %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 item-grid">
+            {% for collection in in_progress_collections %}
+            {% set progress_percent = (collection.watched_count / collection.total_count * 100)|round if collection.total_count > 0 else 0 %}
+            <a href="{{ url_for('main.collection_details', collection_id=collection.id) }}"
+               class="item-card card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl flex flex-col"
+               data-title="{{ collection.name }}"
+               data-progress="{{ progress_percent }}">
+                <div class="relative">
+                    <img src="{{ collection.poster_url }}" alt="Poster for {{ collection.name }}"
+                         onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text={{ collection.name|replace(' ', '+') }}';"
+                         class="w-full h-auto object-cover aspect-[2/3]">
+                </div>
+                <div class="p-4 flex flex-col flex-grow">
+                    <h3 class="font-bold text-lg truncate flex-grow" title="{{ collection.name }}">{{ collection.name }}</h3>
+                    {% if collection.total_count > 0 %}
+                    <div class="mt-2">
+                        <div class="w-full bg-gray-700 rounded-full h-2" title="{{ progress_percent }}% complete">
+                            <div class="bg-blue-600 h-2 rounded-full" style="width: {{ progress_percent }}%;"></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1 text-center">{{ collection.watched_count }} of {{ collection.total_count }} watched</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        <p class="text-gray-400 pt-4 empty-message" style="display: none;"></p>
+        {% else %}
+        <p class="text-gray-400 pt-4">No collections in progress.</p>
+        {% endif %}
+    </div>
+</details>
+
+<details id="completed-section" class="mb-8" open>
+    <summary class="text-3xl font-bold border-b-2 border-green-500 pb-2 mb-6 flex items-center justify-between">
+        <span>Completed (<span class="count">{{ completed_collections|length }}</span>)</span>
+        <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
+    </summary>
+    <div class="pt-2">
+        {% if completed_collections %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 item-grid">
+            {% for collection in completed_collections %}
+            <a href="{{ url_for('main.collection_details', collection_id=collection.id) }}"
+               class="item-card card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl flex flex-col"
+               data-title="{{ collection.name }}"
+               data-progress="100">
+                <div class="relative">
+                    <img src="{{ collection.poster_url }}" alt="Poster for {{ collection.name }}"
+                         onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text={{ collection.name|replace(' ', '+') }}';"
+                         class="w-full h-auto object-cover aspect-[2/3]">
+                    <div class="absolute top-2 right-2 z-20" title="Collection Completed">
+                        <div class="bg-green-600 bg-opacity-80 rounded-full p-2 flex items-center justify-center">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 flex flex-col flex-grow">
+                    <h3 class="font-bold text-lg truncate flex-grow" title="{{ collection.name }}">{{ collection.name }}</h3>
+                    <p class="text-xs text-gray-400 mt-1 text-center">{{ collection.total_count }} movies</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        <p class="text-gray-400 pt-4 empty-message" style="display: none;"></p>
+        {% else %}
+        <p class="text-gray-400 pt-4">You haven't completed any collections yet.</p>
+        {% endif %}
+    </div>
+</details>
+
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('search-input');
+    const sortSelect = document.getElementById('sort-select');
+    const sections = document.querySelectorAll('details[id$="-section"]');
+
+    function filterAndSort() {
+        const query = searchInput.value.toLowerCase().trim();
+        const sortValue = sortSelect.value;
+
+        sections.forEach(section => {
+            const grid = section.querySelector('.item-grid');
+            const originalEmptyMsg = section.querySelector('p:not(.empty-message)');
+            if (!grid) return;
+
+            const cards = Array.from(grid.querySelectorAll('.item-card'));
+            let visibleCount = 0;
+
+            // 1. Filter
+            cards.forEach(card => {
+                const title = card.dataset.title.toLowerCase();
+                const matches = title.includes(query);
+
+                if (matches) {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // 2. Sort
+            cards.sort((a, b) => {
+                const titleA = a.dataset.title.toLowerCase();
+                const titleB = b.dataset.title.toLowerCase();
+                const progressA = parseInt(a.dataset.progress || '0', 10);
+                const progressB = parseInt(b.dataset.progress || '0', 10);
+
+                switch (sortValue) {
+                    case 'title_asc': return titleA.localeCompare(titleB);
+                    case 'title_desc': return titleB.localeCompare(titleA);
+                    case 'progress_asc': return progressA - progressB;
+                    case 'progress_desc': return progressB - progressA;
+                    default: return 0;
+                }
+            });
+
+            // 3. Re-append to grid
+            cards.forEach(card => grid.appendChild(card));
+
+            // 4. Update count and message
+            const countSpan = section.querySelector('.count');
+            if (countSpan) countSpan.textContent = visibleCount;
+
+            const emptyMessage = section.querySelector('.empty-message');
+            if (emptyMessage) {
+                if (visibleCount === 0 && cards.length > 0) {
+                    emptyMessage.textContent = `No collections found for "${query}".`;
+                    emptyMessage.style.display = 'block';
+                    if (originalEmptyMsg) originalEmptyMsg.style.display = 'none';
+                } else {
+                    emptyMessage.style.display = 'none';
+                    if (originalEmptyMsg && cards.length === 0) originalEmptyMsg.style.display = 'block';
+                }
+            }
+        });
+    }
+
+    searchInput.addEventListener('input', filterAndSort);
+    sortSelect.addEventListener('change', filterAndSort);
+    // Initial sort on page load
+    filterAndSort();
+});
+</script>
+
+{% endblock %}
