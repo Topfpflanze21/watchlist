@@ -353,13 +353,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(form);
 
         // For series, find the correct master date input for this watch history
-        if (form.matches('.watch-action-form') && formData.has('series_watch_id')) {
+        if (form.matches('.watch-action-form.ajax-form') && formData.has('series_watch_id')) {
             const watchId = formData.get('series_watch_id');
             const masterDateInput = document.getElementById(`master_date_${watchId}`);
-            if (masterDateInput && masterDateInput.value) {
-                 formData.set('watched_on', masterDateInput.value);
-            } else {
-                 formData.delete('watched_on'); // Ensure no empty date is sent
+            // Always set the date from the master input. Can be empty.
+            // The backend handles empty strings correctly by converting them to None.
+            if (masterDateInput) {
+                formData.set('watched_on', masterDateInput.value);
             }
         }
 

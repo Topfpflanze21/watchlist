@@ -49,7 +49,7 @@ def series():
         if sid in cache['series'] and watch_throughs:
             details = cache['series'][sid]
             # Get the most recently active watch-through for summary display
-            latest_watch = max(watch_throughs, key=lambda w: max((e.get('watched_on', '0001-01-01') for e in w.get('watched_episodes', {}).values()), default='0001-01-01'))
+            latest_watch = max(watch_throughs, key=lambda w: max((e.get('watched_on') or '0001-01-01' for e in w.get('watched_episodes', {}).values()), default='0001-01-01'))
 
             w_ep_c = len(latest_watch.get('watched_episodes', {}))
             t_ep_c = details.get('total_episode_count', 0)
@@ -211,7 +211,12 @@ def item_detail_action(item_type, item_id):
             if current_watch:
                 eid = request.form['episode_id']
                 is_watched_ep = eid in current_watch.get('watched_episodes', {})
-                response_data.update({'episode_id': eid, 'series_watch_id': series_watch_id, 'is_episode_watched': is_watched_ep, 'watched_on': current_watch['watched_episodes'][eid].get('watched_on') if is_watched_ep else None,
+
+                watched_on_date = None
+                if is_watched_ep:
+                    watched_on_date = current_watch.get('watched_episodes', {}).get(eid, {}).get('watched_on')
+
+                response_data.update({'episode_id': eid, 'series_watch_id': series_watch_id, 'is_episode_watched': is_watched_ep, 'watched_on': watched_on_date,
                     'watched_episode_count': len(current_watch.get('watched_episodes', {})), 'total_episode_count': cache.get("series", {}).get(sid, {}).get("total_episode_count", 0)})
     elif item_type == 'movie':
         is_planned = any(i.get('id') == item_id for i in watchlist['planned']['movies'])
