@@ -2,8 +2,9 @@
 import uuid
 import random
 import requests
+import calendar
 from datetime import datetime
-from collections import Counter
+from collections import Counter, defaultdict
 from flask import (Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify)
 from . import data_manager, tmdb_api, utils
 
@@ -23,7 +24,7 @@ def index():
     p_series_suggs = [{**cache['series'][str(i['id'])], 'type': 'series'} for i in planned_series[:6] if str(i['id']) in cache['series']]
 
     return render_template('index.html', planned_movie_suggestions=p_movie_suggs, planned_series_suggestions=p_series_suggs, smart_movie_suggestions=utils.get_smart_suggestions('movies'),
-        smart_series_suggestions=utils.get_smart_suggestions('series'))
+                           smart_series_suggestions=utils.get_smart_suggestions('series'))
 
 
 @bp.route('/movies')
@@ -166,7 +167,7 @@ def item_detail_action(item_type, item_id):
                     if eid not in entry['watched_episodes']: entry['watched_episodes'][eid] = {"watched_on": date}
                 watchlist['planned']['series'] = [i for i in watchlist['planned']['series'] if i.get('id') != item_id]
                 data_manager.save_watchlist(watchlist)
-        else: # unwatch
+        else:  # unwatch
             if str(item_id) in watchlist['watched']['series']:
                 del watchlist['watched']['series'][str(item_id)]
                 data_manager.save_watchlist(watchlist)
@@ -184,9 +185,7 @@ def item_detail_action(item_type, item_id):
         watched_count = len(sdata.get('watched_episodes', {})) if sdata else 0
         total_count = cache.get("series", {}).get(str(item_id), {}).get("total_episode_count", 0)
         is_planned = any(i.get('id') == item_id for i in watchlist['planned']['series'])
-        response_data.update({
-            'watched_episode_count': watched_count, 'total_episode_count': total_count,
-            'is_watched': bool(sdata), 'is_planned': is_planned })
+        response_data.update({'watched_episode_count': watched_count, 'total_episode_count': total_count, 'is_watched': bool(sdata), 'is_planned': is_planned})
         if action == 'toggle_episode':
             eid = request.form['episode_id']
             is_watched_ep = sdata and eid in sdata.get('watched_episodes', {})
@@ -247,17 +246,95 @@ def show_search_results():
 def stats():
     watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
     w_movies = watchlist['watched']['movies']
-    w_series = list(watchlist['watched']['series'].values())
+    w_series_dict = watchlist['watched']['series']
 
-    all_ratings = [i['rating'] for i in w_movies if 'rating' in i] + [s['rating'] for s in w_series if 'rating' in s]
-
+    # --- Main Data Aggregation ---
+    all_ratings = []
+    actors = []
+    directors_creators = []
     genres = []
-    watched_item_ids = {m['id'] for m in w_movies} | {s['id'] for s in w_series}
-    for item_id in watched_item_ids:
-        meta = cache['movies'].get(str(item_id)) or cache['series'].get(str(item_id))
-        if meta and meta.get('genre'):
-            genres.extend([g.strip() for g in meta['genre'].split(',') if g.strip()])
+    decades = []
+    daily_activity = defaultdict(lambda: {'count': 0, 'runtime': 0})
+    monthly_activity = defaultdict(lambda: {'count': 0, 'runtime': 0})
+    movie_watch_time_minutes = 0
+    series_watch_time_minutes = 0
 
-    stats_data = {"total_movies": len({m['id'] for m in w_movies}), "total_movie_watches": len(w_movies), "total_episodes": sum(len(s.get('watched_episodes', {})) for s in w_series), "total_items": len(all_ratings),
-        "ratings_dist": dict(sorted(Counter(all_ratings).items(), key=lambda i: i[0], reverse=True)), "genre_dist": Counter(genres).most_common(10)}
+    # 1. Process Movies
+    for movie_watch in w_movies:
+        movie_id_str = str(movie_watch['id'])
+        if movie_id_str not in cache['movies']: continue
+
+        meta = cache['movies'][movie_id_str]
+
+        if 'rating' in movie_watch: all_ratings.append(movie_watch['rating'])
+        if meta.get('actors'): actors.extend([a.strip() for a in meta['actors'].split(',') if a.strip()])
+        if meta.get('director'): directors_creators.append(meta['director'])
+        if meta.get('genre'): genres.extend([g.strip() for g in meta['genre'].split(',') if g.strip()])
+        if meta.get('year'): decades.append(f"{meta['year'][:3]}0s")
+
+        runtime = meta.get('runtime') or 0
+        movie_watch_time_minutes += runtime
+        try:
+            watch_date = datetime.strptime(movie_watch['watched_on'], '%Y-%m-%d')
+            day_name = calendar.day_name[watch_date.weekday()]
+            month_key = watch_date.strftime('%Y-%m')
+
+            daily_activity[day_name]['count'] += 1
+            daily_activity[day_name]['runtime'] += runtime
+            monthly_activity[month_key]['count'] += 1
+            monthly_activity[month_key]['runtime'] += runtime
+        except (ValueError, KeyError):
+            continue
+
+    # 2. Process Series
+    all_series_episodes = {ep['id']: ep for sid, s_meta in cache.get('series', {}).items() for season in s_meta.get('seasons', []) for ep in season.get('episodes', [])}
+
+    for sid, series_watch in w_series_dict.items():
+        if sid not in cache['series']: continue
+
+        meta = cache['series'][sid]
+
+        if 'rating' in series_watch: all_ratings.append(series_watch['rating'])
+        if meta.get('actors'): actors.extend([a.strip() for a in meta['actors'].split(',') if a.strip()])
+        if meta.get('creator'): directors_creators.append(meta['creator'])
+        if meta.get('genre'): genres.extend([g.strip() for g in meta['genre'].split(',') if g.strip()])
+        if meta.get('year'): decades.append(f"{meta['year'][:3]}0s")
+
+        for ep_id, ep_watch in series_watch.get('watched_episodes', {}).items():
+            episode_meta = all_series_episodes.get(ep_id)
+            runtime = episode_meta.get('runtime') if episode_meta else 0
+            if not runtime: continue
+
+            series_watch_time_minutes += runtime
+            try:
+                watch_date = datetime.strptime(ep_watch['watched_on'], '%Y-%m-%d')
+                day_name = calendar.day_name[watch_date.weekday()]
+                month_key = watch_date.strftime('%Y-%m')
+
+                daily_activity[day_name]['count'] += 1
+                daily_activity[day_name]['runtime'] += runtime
+                monthly_activity[month_key]['count'] += 1
+                monthly_activity[month_key]['runtime'] += runtime
+            except (ValueError, KeyError):
+                continue
+
+    # --- Final Calculations ---
+    total_watch_time_minutes = movie_watch_time_minutes + series_watch_time_minutes
+    most_active_month = max(monthly_activity.items(), key=lambda i: i[1]['count']) if monthly_activity else ('N/A', {'count': 0})
+
+    day_order = list(calendar.day_name)
+    sorted_daily_activity = sorted(daily_activity.items(), key=lambda i: day_order.index(i[0]))
+    max_daily_count = max(d[1]['count'] for d in sorted_daily_activity) if sorted_daily_activity else 0
+
+    movies_time_percent = (movie_watch_time_minutes / total_watch_time_minutes * 100) if total_watch_time_minutes > 0 else 0
+
+    unique_movies = len({m['id'] for m in w_movies})
+    total_movie_watches = len(w_movies)
+
+    stats_data = {"total_movies": unique_movies, "total_movie_watches": total_movie_watches, "total_episodes": sum(len(s.get('watched_episodes', {})) for s in w_series_dict.values()), "movie_watch_time_minutes": movie_watch_time_minutes,
+        "series_watch_time_minutes": series_watch_time_minutes, "total_watch_time_minutes": total_watch_time_minutes, "total_items": len(all_ratings), "ratings_dist": dict(sorted(Counter(all_ratings).items(), key=lambda i: i[0], reverse=True)),
+        "rewatches": total_movie_watches - unique_movies, "favorite_genres": Counter(genres).most_common(10), "favorite_actors": Counter(actors).most_common(10), "favorite_directors": Counter(d for d in directors_creators if d).most_common(10),
+        "favorite_decades": Counter(decades).most_common(5), "daily_activity": sorted_daily_activity, "max_daily_count": max_daily_count,
+        "most_active_month": {"month": datetime.strptime(most_active_month[0], '%Y-%m').strftime('%B %Y') if most_active_month[0] != 'N/A' else 'N/A', "count": most_active_month[1]['count']},
+        "time_breakdown": {"movies": round(movies_time_percent), "series": round(100 - movies_time_percent), }}
     return render_template('stats.html', stats=stats_data)

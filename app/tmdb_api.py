@@ -20,7 +20,7 @@ def get_movie_details(movie_id):
     """Fetches detailed movie information from TMDB, using a cache to avoid redundant API calls."""
     cache = data_manager.load_cache()
     cache_entry = cache.get("movies", {}).get(str(movie_id))
-    if cache_entry and 'trailer_key' in cache_entry and 'watch_providers' in cache_entry:
+    if cache_entry and 'trailer_key' in cache_entry and 'watch_providers' in cache_entry and 'director' in cache_entry:
         return cache_entry
 
     api_key = current_app.config['TMDB_API_KEY']
@@ -32,9 +32,10 @@ def get_movie_details(movie_id):
         res.raise_for_status()
         d = res.json()
         image_url = current_app.config['TMDB_IMAGE_URL']
+        director = next((p['name'] for p in d.get("credits", {}).get("crew", []) if p.get('job') == 'Director'), "")
 
         data = {"id": d.get("id"), "title": d.get("title"), "year": d.get("release_date", "")[:4], "poster_url": f"{image_url}{d.get('poster_path')}" if d.get('poster_path') else "", "genre": ", ".join([g['name'] for g in d.get("genres", [])]),
-            "actors": ", ".join([c['name'] for c in d.get("credits", {}).get("cast", [])[:5]]), "plot": d.get("overview"), "runtime": d.get('runtime'), 'trailer_key': find_trailer_key(d.get("videos", {}).get("results", [])),
+            "actors": ", ".join([c['name'] for c in d.get("credits", {}).get("cast", [])[:5]]), "director": director, "plot": d.get("overview"), "runtime": d.get('runtime'), 'trailer_key': find_trailer_key(d.get("videos", {}).get("results", [])),
             'recommendations': [{"id": r.get("id"), "title": r.get("title"), "type": "movie", "poster_url": f"{image_url}{r.get('poster_path')}", "year": r.get("release_date", "")[:4], } for r in d.get("recommendations", {}).get("results", []) if
                                    r.get('poster_path')][:12]}
 
@@ -54,7 +55,7 @@ def get_series_details(series_id):
     """Fetches detailed series information from TMDB, including all episodes."""
     cache = data_manager.load_cache()
     entry = cache.get("series", {}).get(str(series_id))
-    if entry and entry.get("has_season_data") and 'trailer_key' in entry and 'watch_providers' in entry:
+    if entry and entry.get("has_season_data") and 'trailer_key' in entry and 'watch_providers' in entry and 'creator' in entry:
         return entry
 
     api_key = current_app.config['TMDB_API_KEY']
@@ -66,9 +67,10 @@ def get_series_details(series_id):
         res.raise_for_status()
         d = res.json()
         image_url = current_app.config['TMDB_IMAGE_URL']
+        creator = ", ".join([c['name'] for c in d.get("created_by", [])])
 
         data = {"id": d.get("id"), "title": d.get("name"), "year": d.get("first_air_date", "")[:4], "poster_url": f"{image_url}{d.get('poster_path')}" if d.get('poster_path') else "", "genre": ", ".join([g['name'] for g in d.get("genres", [])]),
-            "actors": ", ".join([c['name'] for c in d.get("aggregate_credits", {}).get("cast", [])[:5]]), "plot": d.get("overview"), "number_of_seasons": d.get('number_of_seasons'), "number_of_episodes": d.get('number_of_episodes'), "seasons": [],
+            "actors": ", ".join([c['name'] for c in d.get("aggregate_credits", {}).get("cast", [])[:5]]), "creator": creator, "plot": d.get("overview"), "number_of_seasons": d.get('number_of_seasons'), "number_of_episodes": d.get('number_of_episodes'), "seasons": [],
             "total_episode_count": 0, "has_season_data": True, 'trailer_key': find_trailer_key(d.get("videos", {}).get("results", [])),
             'recommendations': [{"id": r.get("id"), "title": r.get("name"), "type": "series", "poster_url": f"{image_url}{r.get('poster_path')}", "year": r.get("first_air_date", "")[:4], } for r in d.get("recommendations", {}).get("results", []) if
                                    r.get('poster_path')][:12]}
@@ -86,7 +88,7 @@ def get_series_details(series_id):
                 s_d = s_res.json()
                 eps = s_d.get('episodes', [])
                 data["seasons"].append({"season_number": s_d.get("season_number"), "name": s_d.get("name"), "episode_count": len(eps),
-                    "episodes": [{"episode_number": ep.get("episode_number"), "name": ep.get("name"), "id": f"s{s_num:02d}e{ep.get('episode_number'):02d}"} for ep in eps]})
+                    "episodes": [{"episode_number": ep.get("episode_number"), "name": ep.get("name"), "id": f"s{s_num:02d}e{ep.get('episode_number'):02d}", "runtime": ep.get('runtime')} for ep in eps]})
                 data["total_episode_count"] += len(eps)
             except requests.RequestException:
                 continue

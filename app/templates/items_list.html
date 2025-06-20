@@ -1,16 +1,50 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex-grow">
+        <label for="search-input" class="sr-only">Search</label>
+        <input type="text" id="search-input" placeholder="Search by title, genre, actor..." class="w-full max-w-sm bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:ring-blue-500 focus:border-blue-500">
+    </div>
+    <div class="flex-shrink-0">
+        <label for="sort-select" class="mr-2 text-gray-300">Sort by:</label>
+        <select id="sort-select" class="bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white">
+            {% if item_type == 'movies' %}
+            <option value="last_watched_desc">Last Watched (Newest First)</option>
+            <option value="last_watched_asc">Last Watched (Oldest First)</option>
+            <option value="title_asc">Title (A-Z)</option>
+            <option value="title_desc">Title (Z-A)</option>
+            <option value="rating_desc">Rating (High to Low)</option>
+            <option value="rating_asc">Rating (Low to High)</option>
+            <option value="year_desc">Year (Newest First)</option>
+            <option value="year_asc">Year (Oldest First)</option>
+            {% else %}
+            <option value="last_watched_desc">Last Watched (Newest First)</option>
+            <option value="last_watched_asc">Last Watched (Oldest First)</option>
+            <option value="title_asc">Title (A-Z)</option>
+            <option value="title_desc">Title (Z-A)</option>
+            <option value="status">Status</option>
+            <option value="year_desc">Year (Newest First)</option>
+            <option value="year_asc">Year (Oldest First)</option>
+            {% endif %}
+        </select>
+    </div>
+</div>
+
 <details id="planned-section" class="mb-8" open>
     <summary class="text-3xl font-bold border-b-2 {% if item_type == 'movies' %}border-blue-500{% else %}border-purple-500{% endif %} pb-2 mb-6 flex items-center justify-between">
-        <span>Plan to Watch ({{ planned_items|length }})</span>
+        <span>Plan to Watch (<span class="count">{{ planned_items|length }}</span>)</span>
         <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
     </summary>
     <div class="pt-2">
         {% if planned_items %}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 item-grid">
             {% for item in planned_items %}
             <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}"
-               class="item-card card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
+               class="item-card card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl"
+               data-title="{{ item.title }}"
+               data-year="{{ item.year }}"
+               data-genre="{{ item.genre|default('', true) }}"
+               data-actors="{{ item.actors|default('', true) }}">
                 <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
                 <div class="p-4">
                     <h3 class="font-bold text-lg truncate">{{ item.title }}</h3>
@@ -19,6 +53,7 @@
             </a>
             {% endfor %}
         </div>
+        <p class="text-gray-400 pt-4 empty-message" style="display: none;"></p>
         {% else %}
         <p class="text-gray-400 pt-4">You haven't planned to watch any {{ item_type }} yet.</p>
         {% endif %}
@@ -28,18 +63,25 @@
 <details id="watched-section" class="mb-8" open>
     <summary class="text-3xl font-bold border-b-2 {% if item_type == 'movies' %}border-blue-500{% else %}border-purple-500{% endif %} pb-2 mb-6 flex items-center justify-between">
         {% if item_type == 'movies' %}
-            <span>Watched ({{ watched_items|length }})</span>
+            <span>Watched (<span class="count">{{ watched_items|length }}</span>)</span>
         {% else %}
-            <span>In Progress & Watched ({{ watched_items|length }})</span>
+            <span>In Progress & Watched (<span class="count">{{ watched_items|length }}</span>)</span>
         {% endif %}
         <span class="disclosure-arrow text-gray-400 text-2xl">▼</span>
     </summary>
     <div class="pt-2">
         {% if watched_items %}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 item-grid">
             {% for item in watched_items %}
             <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}"
-               class="item-card card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl relative">
+               class="item-card card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl relative"
+               data-title="{{ item.title }}"
+               data-last-watched="{{ item.get('last_watched_on') or item.get('watched_on', 'N/A') }}"
+               data-rating="{{ item.get('rating')|int if item.get('rating') else 0 }}"
+               data-status="{{ item.get('status', '') }}"
+               data-year="{{ item.year }}"
+               data-genre="{{ item.genre|default('', true) }}"
+               data-actors="{{ item.actors|default('', true) }}">
 
                 {% if item.type == 'movie' and item.get('watch_count', 0) > 1 %}
                 <div class="absolute top-2 right-2 z-10 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
@@ -69,9 +111,113 @@
             </a>
             {% endfor %}
         </div>
+        <p class="text-gray-400 pt-4 empty-message" style="display: none;"></p>
         {% else %}
         <p class="text-gray-400 pt-4">You haven't marked any {{ item_type }} as watched yet.</p>
         {% endif %}
     </div>
 </details>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('search-input');
+    const sortSelect = document.getElementById('sort-select');
+    const sections = document.querySelectorAll('details[id$="-section"]');
+
+    function filterAndSort() {
+        const query = searchInput.value.toLowerCase().trim();
+        const sortValue = sortSelect.value;
+        const isSortByYear = sortValue.startsWith('year');
+
+        sections.forEach(section => {
+            const grid = section.querySelector('.item-grid');
+            const originalEmptyMsg = section.querySelector('p:not(.empty-message)');
+            if (!grid) return;
+
+            const cards = Array.from(grid.querySelectorAll('.item-card'));
+            let visibleCount = 0;
+
+            // 1. Filter
+            cards.forEach(card => {
+                const title = card.dataset.title.toLowerCase();
+                const genre = card.dataset.genre.toLowerCase();
+                const actors = card.dataset.actors.toLowerCase();
+                const matches = title.includes(query) || genre.includes(query) || actors.includes(query);
+
+                if (matches) {
+                    card.style.display = '';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // 2. Sort
+            cards.sort((a, b) => {
+                const titleA = a.dataset.title.toLowerCase();
+                const titleB = b.dataset.title.toLowerCase();
+                const ratingA = parseInt(a.dataset.rating || '0', 10);
+                const ratingB = parseInt(b.dataset.rating || '0', 10);
+                const watchedA = a.dataset.lastWatched || '0';
+                const watchedB = b.dataset.lastWatched || '0';
+                const statusA = a.dataset.status || '';
+                const statusB = b.dataset.status || '';
+                const yearA = parseInt(a.dataset.year || '0', 10);
+                const yearB = parseInt(b.dataset.year || '0', 10);
+
+                switch (sortValue) {
+                    case 'title_asc': return titleA.localeCompare(titleB);
+                    case 'title_desc': return titleB.localeCompare(titleA);
+                    case 'rating_asc': return ratingA - ratingB;
+                    case 'rating_desc': return ratingB - ratingA;
+                    case 'last_watched_asc': return new Date(watchedA) - new Date(watchedB);
+                    case 'last_watched_desc': return new Date(watchedB) - new Date(watchedA);
+                    case 'year_asc': return yearA - yearB;
+                    case 'year_desc': return yearB - yearA;
+                    case 'status':
+                        if (statusA === statusB) return titleA.localeCompare(titleB);
+                        return statusA === 'Completed' ? 1 : -1;
+                    default: return 0;
+                }
+            });
+
+            // 3. Re-append to grid and update text
+            cards.forEach(card => {
+                grid.appendChild(card);
+                if (section.id === 'watched-section') {
+                    const textElement = card.querySelector('p.text-sm.text-gray-400');
+                    if (textElement) {
+                        if (isSortByYear) {
+                            textElement.textContent = `${card.dataset.year}`;
+                        } else {
+                            textElement.textContent = `Last watched: ${card.dataset.lastWatched}`;
+                        }
+                    }
+                }
+            });
+
+
+            // 4. Update count and message
+            const countSpan = section.querySelector('.count');
+            if (countSpan) countSpan.textContent = visibleCount;
+
+            const emptyMessage = section.querySelector('.empty-message');
+            if (emptyMessage) {
+                if (visibleCount === 0 && cards.length > 0) {
+                    emptyMessage.textContent = `No results found for "${query}".`;
+                    emptyMessage.style.display = 'block';
+                    if (originalEmptyMsg) originalEmptyMsg.style.display = 'none';
+                } else {
+                    emptyMessage.style.display = 'none';
+                    if (originalEmptyMsg && cards.length === 0) originalEmptyMsg.style.display = 'block';
+                }
+            }
+        });
+    }
+
+    searchInput.addEventListener('input', filterAndSort);
+    sortSelect.addEventListener('change', filterAndSort);
+    filterAndSort();
+});
+</script>
 {% endblock %}
