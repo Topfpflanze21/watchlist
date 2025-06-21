@@ -30,15 +30,12 @@ def run_initial_setup():
 
 def sync_cache_with_watchlist(app):
     """Ensures all items in the watchlist have up-to-date metadata in the cache."""
-    with app.app_context(): # <--- This line is the fix
+    with app.app_context():  # <--- This line is the fix
         print("Syncing metadata cache with watchlist...")
         watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
         fetched_count = 0
 
-        all_item_ids = {
-            'movie': {str(m['id']) for m in watchlist['watched']['movies'] + watchlist['planned']['movies']},
-            'series': {str(s['id']) for s in watchlist['planned']['series']} | set(watchlist['watched']['series'].keys())
-        }
+        all_item_ids = {'movie': {str(m['id']) for m in watchlist['watched']['movies'] + watchlist['planned']['movies']}, 'series': {str(s['id']) for s in watchlist['planned']['series']} | set(watchlist['watched']['series'].keys())}
 
         for mid in all_item_ids['movie']:
             if mid not in cache['movies'] or 'watch_providers' not in cache['movies'][mid]:
@@ -52,58 +49,80 @@ def sync_cache_with_watchlist(app):
         else:
             print("Cache is up to date.")
 
-
 def get_smart_suggestions(item_type):
     """Generates personalized suggestions based on watched items."""
     watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
     today = datetime.now()
     singular_type = 'movie' if item_type == 'movies' else 'series'
+
+    # Get all items the user has already seen or planned to see to avoid re-recommending them
     user_item_ids = {item['id'] for item in watchlist['planned'][item_type]}
     if item_type == 'movies':
         user_item_ids.update(item['id'] for item in watchlist['watched']['movies'])
-        source_items = watchlist['watched']['movies']
+        source_items = [item for item in watchlist['watched']['movies'] if item.get('rating') is not None]
     else:  # 'series'
         user_item_ids.update(int(id) for id in watchlist['watched']['series'])
-        # FIX: Flatten the list of watch-throughs to handle the multi-watch data structure.
         source_items = []
         for sid, watch_throughs in watchlist['watched']['series'].items():
             for watch in watch_throughs:
-                source_items.append({
-                    'id': int(sid),
-                    'rating': watch.get('rating'),
-                    'watched_episodes': watch.get('watched_episodes', {})
-                })
+                if watch.get('rating') is not None:
+                    source_items.append({'id': int(sid), 'rating': watch.get('rating'), 'watched_episodes': watch.get('watched_episodes', {})})
 
+    scores = {}
+    recommendation_data = {}
 
-    scores, recommendation_data = {}, {}
+    # Calculate influence scores for all recommendations
     for item in source_items:
         id_str = str(item['id'])
         if id_str not in cache[item_type] or 'recommendations' not in cache[item_type][id_str]:
             continue
 
         rating = item.get('rating')
-        if rating is None: continue # Skip items that have not been rated
+        base_influence = rating - 3.0
 
         if item_type == 'movies':
             date_str = item.get('watched_on')
         else:
             date_str = max((e['watched_on'] for e in item['watched_episodes'].values() if e.get('watched_on')), default=None) if item.get('watched_episodes') else None
-        if not date_str: continue
 
+        time_decay = 1.0
+        if date_str:
+            try:
+                days_since_watched = max(0, (today - datetime.strptime(date_str, '%Y-%m-%d')).days)
+                time_decay = 0.997 ** days_since_watched
+            except (ValueError, TypeError):
+                pass
+
+        influence_score = base_influence * time_decay
+
+        for rec in cache[item_type][id_str].get('recommendations', []):
+            rec_id = rec.get('id')
+            if rec_id and rec_id not in user_item_ids:
+                scores[rec_id] = scores.get(rec_id, 0) + influence_score
+                if rec_id not in recommendation_data:
+                    recommendation_data[rec_id] = {**rec, 'type': singular_type}
+
+    # Perform a weighted random sort
+    weighted_suggestions = []
+    temperature = 5.0  # Higher temp = more randomness; lower = more score-based
+
+    for rec_id, score in scores.items():
         try:
-            days_since_watched = max(0, (today - datetime.strptime(date_str, '%Y-%m-%d')).days)
-            base_score = (rating ** 2) * (0.98 ** days_since_watched)
+            # Use math.exp to handle positive/negative scores and create a weighted key
+            weight = math.exp(score / temperature)
+        except OverflowError:
+            weight = float('inf')  # Handle potential for very large scores
 
-            for rec in cache[item_type][id_str].get('recommendations', []):
-                if rec.get('id') and rec['id'] not in user_item_ids:
-                    scores[rec['id']] = scores.get(rec['id'], 0) + base_score
-                    if rec['id'] not in recommendation_data:
-                        recommendation_data[rec['id']] = {**rec, 'type': singular_type}
-        except (ValueError, TypeError):
-            continue
+        random_sort_key = random.random() * weight
+        weighted_suggestions.append((rec_id, random_sort_key))
 
-    sorted_recs = sorted(scores.items(), key=lambda i: i[1], reverse=True)
-    return [recommendation_data[id] for id, score in sorted_recs]
+    # Sort by the new weighted random key
+    weighted_suggestions.sort(key=lambda x: x[1], reverse=True)
+
+    # Reconstruct the final list in the new order
+    final_list = [recommendation_data[id] for id, key in weighted_suggestions if id in recommendation_data]
+
+    return final_list
 
 def get_weighted_planned_suggestions(item_type, watchlist, cache):
     """
@@ -149,12 +168,13 @@ def get_weighted_planned_suggestions(item_type, watchlist, cache):
             try:
                 days_since = (today - datetime.strptime(date_str, '%Y-%m-%d')).days
                 time_decay = 0.997 ** max(0, days_since)
-            except (ValueError, TypeError): pass
+            except (ValueError, TypeError):
+                pass
         base_influence = rating_influence * time_decay
         w_item_id = str(w_item['id'])
         w_item_details = cache.get(internal_type, {}).get(w_item_id)
         if w_item_details:
-             watched_item_influences.append({'influence': base_influence, 'details': w_item_details})
+            watched_item_influences.append({'influence': base_influence, 'details': w_item_details})
 
     # 3. Score each planned item based on similarity to watched items
     for p_item in planned_items:
@@ -184,7 +204,7 @@ def get_weighted_planned_suggestions(item_type, watchlist, cache):
         p_item_id = str(p_item['id'])
         score = item_scores.get(p_item_id, 0.0)
         # Use math.exp to handle negative scores and create a weighted, randomized key
-        weight = math.exp(score / 3.0) # Temperature of 3.0 balances score vs randomness
+        weight = math.exp(score / 3.0)  # Temperature of 3.0 balances score vs randomness
         random_sort_key = random.random() * weight
         weighted_planned_list.append((p_item, random_sort_key))
 
@@ -214,15 +234,16 @@ def get_continue_collection_suggestions(watchlist, cache):
             try:
                 days_since = (today - datetime.strptime(date_str, '%Y-%m-%d')).days
                 time_decay = 0.997 ** max(0, days_since)
-            except (ValueError, TypeError): pass
+            except (ValueError, TypeError):
+                pass
         base_influence = rating_influence * time_decay
         w_item_id = str(watch['id'])
         w_item_details = cache.get('movies', {}).get(w_item_id)
         if w_item_details:
-             watched_item_influences.append({'influence': base_influence, 'details': w_item_details})
+            watched_item_influences.append({'influence': base_influence, 'details': w_item_details})
     # Process all rated series
     for sid, watch_throughs in watchlist['watched']['series'].items():
-         for watch in watch_throughs:
+        for watch in watch_throughs:
             rating = watch.get('rating')
             if rating is None: continue
             rating_influence = rating - 3.0
@@ -232,7 +253,8 @@ def get_continue_collection_suggestions(watchlist, cache):
                 try:
                     days_since = (today - datetime.strptime(last_watched_date, '%Y-%m-%d')).days
                     time_decay = 0.997 ** max(0, days_since)
-                except (ValueError, TypeError): pass
+                except (ValueError, TypeError):
+                    pass
             base_influence = rating_influence * time_decay
             w_item_details = cache.get('series', {}).get(sid)
             if w_item_details:
@@ -270,7 +292,8 @@ def get_continue_collection_suggestions(watchlist, cache):
                     try:
                         days_since = (today - datetime.strptime(watched_on, '%Y-%m-%d')).days
                         time_decay = 0.997 ** max(0, days_since)
-                    except (ValueError, TypeError): pass
+                    except (ValueError, TypeError):
+                        pass
                 primary_score += rating_score * time_decay
 
             # --- Calculate Secondary Score (similarity to all watched items) ---
@@ -295,10 +318,7 @@ def get_continue_collection_suggestions(watchlist, cache):
             # --- Combine Scores ---
             primary_weight = 5.0
             final_score = (primary_score * primary_weight) + secondary_score
-            suggestions_with_scores.append({
-                'suggestion': next_movie_to_watch,
-                'score': final_score
-            })
+            suggestions_with_scores.append({'suggestion': next_movie_to_watch, 'score': final_score})
 
     # --- 4. Sort and finalize ---
     sorted_suggestions = sorted(suggestions_with_scores, key=lambda x: x['score'], reverse=True)
