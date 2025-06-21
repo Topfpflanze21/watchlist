@@ -2,9 +2,8 @@
 {% block content %}
 <h1 class="text-4xl font-bold mb-8 text-center">Your Watchlist Statistics</h1>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mb-6">
-    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Unique Movies Watched</h2><p class="text-5xl font-bold text-blue-400 mt-2">{{ stats.total_movies }}</p></div>
-    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Total Movie Viewings</h2><p class="text-5xl font-bold text-white mt-2">{{ stats.total_movie_watches }} <span class="text-lg text-gray-400">({{ stats.rewatches }} rewatches)</span></p></div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center mb-6">
+    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Total Movie Viewings</h2><p class="text-5xl font-bold text-blue-400 mt-2">{{ stats.total_movie_watches }}</p></div>
     <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">TV Episodes Watched</h2><p class="text-5xl font-bold text-purple-400 mt-2">{{ stats.total_episodes }}</p></div>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mb-12">
@@ -24,10 +23,9 @@
                 <div class="w-28 text-right mr-4 font-semibold">{{ day }}</div>
                 <div class="flex-1 bg-gray-700 rounded-full h-6 flex items-center">
                     {% set width_percent = (data.count / stats.max_daily_count * 100)|round|int if stats.max_daily_count > 0 else 0 %}
-
                     {% if width_percent < 25 %}
                         <div class="bg-green-500 h-full rounded-full" style="width: {{ width_percent }}%;"></div>
-                        <span class="ml-2 text-white font-bold text-sm">{{ data.count }} items</span>
+                        {% if data.count > 0 %}<span class="ml-2 text-white font-bold text-sm">{{ data.count }} items</span>{% endif %}
                     {% else %}
                         <div class="bg-green-500 h-full rounded-full flex items-center justify-end pr-2" style="width: {{ width_percent }}%;">
                             <span class="text-black font-bold text-sm">{{ data.count }} items</span>
@@ -66,17 +64,17 @@
     <div class="card p-6 rounded-lg">
         <h3 class="text-2xl font-bold mb-4">Favorite Genres</h3>
         <div class="space-y-2">
-            {% if stats.favorite_genres %}{% for item, count in stats.favorite_genres %}<div class="flex justify-between items-center text-lg"><span>{{ item }}</span><span class="font-bold bg-blue-500 text-white rounded-full px-3 py-1 text-sm">{{ count }}</span></div>{% endfor %}{% else %}<p class="text-gray-400">No items watched yet.</p>{% endif %}
+            {% if stats.favorite_genres %}{% for item, score in stats.favorite_genres %}<div class="flex justify-between items-center text-lg"><span>{{ item }}</span><span class="font-bold bg-blue-500 text-white rounded-full px-3 py-1 text-sm">{{ "%.1f"|format(score) }}</span></div>{% endfor %}{% else %}<p class="text-gray-400">No items watched yet.</p>{% endif %}
         </div>
     </div>
     <div class="card p-6 rounded-lg">
         <h3 class="text-2xl font-bold mb-4">Favorite Actors</h3>
         <div class="space-y-2">
             {% if stats.favorite_actors %}
-                {% for actor_name, count in stats.favorite_actors %}
+                {% for actor_name, score in stats.favorite_actors %}
                 <div class="flex justify-between items-center text-lg">
                     <a href="https://www.themoviedb.org/search?query={{ actor_name|urlencode }}" target="_blank" class="hover:text-white underline">{{ actor_name }}</a>
-                    <span class="font-bold bg-purple-500 text-white rounded-full px-3 py-1 text-sm">{{ count }}</span>
+                    <span class="font-bold bg-purple-500 text-white rounded-full px-3 py-1 text-sm">{{ "%.1f"|format(score) }}</span>
                 </div>
                 {% endfor %}
             {% else %}
@@ -87,29 +85,83 @@
     <div class="card p-6 rounded-lg">
         <h3 class="text-2xl font-bold mb-4">Favorite Directors/Creators</h3>
         <div class="space-y-2">
-            {% if stats.favorite_directors %}{% for item, count in stats.favorite_directors %}<div class="flex justify-between items-center text-lg"><span>{{ item }}</span><span class="font-bold bg-green-500 text-white rounded-full px-3 py-1 text-sm">{{ count }}</span></div>{% endfor %}{% else %}<p class="text-gray-400">No items watched yet.</p>{% endif %}
+            {% if stats.favorite_directors %}{% for item, score in stats.favorite_directors %}<div class="flex justify-between items-center text-lg">
+                <a href="https://www.themoviedb.org/search?query={{ item|urlencode }}" target="_blank" class="hover:text-white underline">{{ item }}</a>
+                <span class="font-bold bg-green-500 text-white rounded-full px-3 py-1 text-sm">{{ "%.1f"|format(score) }}</span>
+            </div>{% endfor %}{% else %}<p class="text-gray-400">No items watched yet.</p>{% endif %}
         </div>
     </div>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8 mb-12">
     <div class="card p-6 rounded-lg">
         <h3 class="text-2xl font-bold mb-4">Favorite Decades</h3>
         <div class="space-y-2">
-            {% if stats.favorite_decades %}{% for item, count in stats.favorite_decades %}<div class="flex justify-between items-center text-lg"><span>{{ item }}</span><span class="font-bold bg-yellow-500 text-white rounded-full px-3 py-1 text-sm">{{ count }}</span></div>{% endfor %}{% else %}<p class="text-gray-400">No items watched yet.</p>{% endif %}
+            {% if stats.favorite_decades %}{% for item, score in stats.favorite_decades %}<div class="flex justify-between items-center text-lg"><span>{{ item }}</span><span class="font-bold bg-yellow-500 text-white rounded-full px-3 py-1 text-sm">{{ "%.1f"|format(score) }}</span></div>{% endfor %}{% else %}<p class="text-gray-400">No items watched yet.</p>{% endif %}
         </div>
     </div>
     <div class="card p-6 rounded-lg">
         <h3 class="text-2xl font-bold mb-4">Ratings Distribution</h3>
-        {% if stats.ratings_dist %}
         <div class="space-y-3">
+            {% if stats.max_rating_count > 0 %}
             {% for rating, count in stats.ratings_dist.items() %}
-            <div class="flex items-center"><div class="w-20 text-right mr-4"><span class="font-semibold">{{ '★' * rating }}</span></div><div class="flex-1 bg-gray-700 rounded-full h-6"><div class="bg-yellow-500 h-6 rounded-full text-right pr-2 text-black font-bold flex items-center justify-end" style="width: {{ (count / stats.total_items * 100)|round|int if stats.total_items > 0 else 0 }}%;">{{ count }}</div></div></div>
+            <div class="flex items-center">
+                <div class="w-24 text-right mr-4 font-semibold rating-star text-lg">{{ '★' * rating }}</div>
+                <div class="flex-1 bg-gray-700 rounded-full h-6 flex items-center">
+                    {% set width_percent = (count / stats.max_rating_count * 100)|round|int %}
+                    {% if width_percent < 25 %}
+                        <div class="bg-yellow-500 h-full rounded-full" style="width: {{ width_percent }}%;"></div>
+                        {% if count > 0 %}<span class="ml-2 text-white font-bold text-sm">{{ count }}</span>{% endif %}
+                    {% else %}
+                        <div class="bg-yellow-500 h-full rounded-full flex items-center justify-end pr-2" style="width: {{ width_percent }}%;">
+                            <span class="text-black font-bold text-sm">{{ count }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
             {% endfor %}
+            {% else %}
+            <p class="text-gray-400">No rated items yet.</p>
+            {% endif %}
         </div>
-        {% else %}
-        <p class="text-gray-400">No rated items yet.</p>
-        {% endif %}
+    </div>
+</div>
+
+<h2 class="text-3xl font-bold mb-6 text-white border-b-2 border-gray-700 pb-2">Provider Insights</h2>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+    <div class="card p-6 rounded-lg">
+        <h3 class="text-2xl font-bold mb-4">For Your 'Plan to Watch' List</h3>
+        <p class="text-gray-400 mb-4 text-sm">Providers with the most items from your planned list.</p>
+        <div class="space-y-3">
+            {% if stats.planned_providers %}
+                {% for provider in stats.planned_providers %}
+                <div class="flex items-center gap-4 bg-gray-800 p-2 rounded-lg">
+                    <img src="{{ provider.logo_url }}" alt="{{ provider.name }}" class="w-10 h-10 rounded-md flex-shrink-0">
+                    <div class="flex-grow font-semibold">{{ provider.name }}</div>
+                    <span class="font-bold bg-blue-500 text-white rounded-full px-3 py-1 text-sm">{{ provider.count }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-gray-400">No provider data for your planned items yet.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card p-6 rounded-lg">
+        <h3 class="text-2xl font-bold mb-4">From Your Watch History</h3>
+        <p class="text-gray-400 mb-4 text-sm">Top providers based on what you've watched, rated, and when.</p>
+        <div class="space-y-3">
+             {% if stats.watched_providers %}
+                {% for provider in stats.watched_providers %}
+                <div class="flex items-center gap-4 bg-gray-800 p-2 rounded-lg">
+                    <img src="{{ provider.logo_url }}" alt="{{ provider.name }}" class="w-10 h-10 rounded-md flex-shrink-0">
+                    <div class="flex-grow font-semibold">{{ provider.name }}</div>
+                    <span class="font-bold bg-purple-500 text-white rounded-full px-3 py-1 text-sm">{{ "%.1f"|format(provider.score) }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-gray-400">No provider data for your watched items yet.</p>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

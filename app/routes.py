@@ -356,116 +356,132 @@ def stats():
     watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
     w_movies = watchlist['watched']['movies']
     w_series_dict = watchlist['watched']['series']
+    today = datetime.now()
 
-    # --- Main Data Aggregation ---
+    # --- Scoring Dictionaries & Data Aggregation ---
+    genre_scores, actor_scores, director_creator_scores, decade_scores = [defaultdict(float) for _ in range(4)]
     all_ratings = []
-    actors = []
-    directors_creators = []
-    genres = []
-    decades = []
-    daily_activity = defaultdict(lambda: {'count': 0, 'runtime': 0})
-    monthly_activity = defaultdict(lambda: {'count': 0, 'runtime': 0})
-    movie_watch_time_minutes = 0
-    series_watch_time_minutes = 0
-    total_episodes_watched = 0
+    daily_activity, monthly_activity = defaultdict(lambda: {'count': 0}), defaultdict(int)
+    movie_watch_time_minutes, series_watch_time_minutes, total_episodes_watched = 0, 0, 0
+    planned_provider_counts, watched_provider_scores = defaultdict(int), defaultdict(float)
+    provider_meta = {}
 
-    # 1. Process Movies
+    def calculate_score(rating, date_str):
+        rating_score = (rating - 3) if rating is not None else 0
+        time_decay = 1.0
+        if date_str:
+            try:
+                days_since = (today - datetime.strptime(date_str, '%Y-%m-%d')).days
+                time_decay = 0.997 ** max(0, days_since)
+            except (ValueError, TypeError): pass
+        return rating_score * time_decay
+
+    # --- Process Movies ---
     for movie_watch in w_movies:
         movie_id_str = str(movie_watch['id'])
         if movie_id_str not in cache['movies']: continue
         meta = cache['movies'][movie_id_str]
+        watched_on = movie_watch.get('watched_on')
+        score = calculate_score(movie_watch.get('rating'), watched_on)
+
         if movie_watch.get('rating') is not None: all_ratings.append(movie_watch['rating'])
-        if meta.get('actors'): actors.extend([a.strip() for a in meta['actors'].split(',') if a.strip()])
-        if meta.get('director'): directors_creators.append(meta['director'])
-        if meta.get('genre'): genres.extend([g.strip() for g in meta['genre'].split(',') if g.strip()])
-        if meta.get('year'): decades.append(f"{meta['year'][:3]}0s")
-        runtime = meta.get('runtime') or 0
-        movie_watch_time_minutes += runtime
-        try:
-            watch_date_str = movie_watch.get('watched_on')
-            if not watch_date_str: continue
-            watch_date = datetime.strptime(watch_date_str, '%Y-%m-%d')
-            day_name = calendar.day_name[watch_date.weekday()]
-            month_key = watch_date.strftime('%Y-%m')
-            daily_activity[day_name]['count'] += 1
-            daily_activity[day_name]['runtime'] += runtime
-            monthly_activity[month_key]['count'] += 1
-            monthly_activity[month_key]['runtime'] += runtime
-        except (ValueError, KeyError, TypeError):
-            continue
+        for g in meta.get('genre', '').split(','):
+            if g.strip(): genre_scores[g.strip()] += score
+        for a in meta.get('actors', '').split(','):
+            if a.strip(): actor_scores[a.strip()] += score
+        if meta.get('director'): director_creator_scores[meta['director']] += score
+        if meta.get('year'): decade_scores[f"{meta['year'][:3]}0s"] += score
+        movie_watch_time_minutes += meta.get('runtime') or 0
+        for p in meta.get('watch_providers', {}).get('flatrate', []):
+            if p.get('name'):
+                watched_provider_scores[p['name']] += score
+                provider_meta.setdefault(p['name'], {'logo_url': p.get('logo_url')})
 
-    # 2. Process Series (with multi-watch)
-    # FIX: Create a nested dictionary for episode metadata to prevent ID collisions between different series.
+        if watched_on:
+            try:
+                watch_date = datetime.strptime(watched_on, '%Y-%m-%d')
+                daily_activity[calendar.day_name[watch_date.weekday()]]['count'] += 1
+                monthly_activity[watch_date.strftime('%Y-%m')] += 1
+            except (ValueError, KeyError, TypeError): continue
+
+    # --- Process Series ---
     all_series_episodes_by_series = defaultdict(dict)
-    if 'series' in cache:
-        for sid_cache, s_meta in cache['series'].items():
-            for season in s_meta.get('seasons', []):
-                for ep in season.get('episodes', []):
-                    all_series_episodes_by_series[sid_cache][ep['id']] = ep
-
+    for sid, s_meta in cache.get('series', {}).items():
+        for season in s_meta.get('seasons', []):
+            for ep in season.get('episodes', []): all_series_episodes_by_series[sid][ep['id']] = ep
     for sid, watch_throughs in w_series_dict.items():
         if sid not in cache['series']: continue
         meta = cache['series'][sid]
+        for p in meta.get('watch_providers', {}).get('flatrate', []):
+            if p.get('name'): provider_meta.setdefault(p['name'], {'logo_url': p.get('logo_url')})
 
         for series_watch in watch_throughs:
+            last_watched = max((ep.get('watched_on') for ep in series_watch.get('watched_episodes', {}).values() if ep.get('watched_on')), default=None)
+            score = calculate_score(series_watch.get('rating'), last_watched)
+
             if series_watch.get('rating') is not None: all_ratings.append(series_watch['rating'])
-        if meta.get('actors'): actors.extend([a.strip() for a in meta['actors'].split(',') if a.strip()])
-        if meta.get('creator'): directors_creators.append(meta['creator'])
-        if meta.get('genre'): genres.extend([g.strip() for g in meta['genre'].split(',') if g.strip()])
-        if meta.get('year'): decades.append(f"{meta['year'][:3]}0s")
+            for g in meta.get('genre', '').split(','):
+                if g.strip(): genre_scores[g.strip()] += score
+            for a in meta.get('actors', '').split(','):
+                if a.strip(): actor_scores[a.strip()] += score
+            if meta.get('creator'): director_creator_scores[meta['creator']] += score
+            if meta.get('year'): decade_scores[f"{meta['year'][:3]}0s"] += score
+            for p in meta.get('watch_providers', {}).get('flatrate', []):
+                if p.get('name'): watched_provider_scores[p['name']] += score
 
-        for series_watch in watch_throughs:
             total_episodes_watched += len(series_watch.get('watched_episodes', {}))
             for ep_id, ep_watch in series_watch.get('watched_episodes', {}).items():
-                # FIX: Look up the episode metadata from the series-specific nested dictionary.
-                episode_meta = all_series_episodes_by_series.get(sid, {}).get(ep_id)
-                runtime = episode_meta.get('runtime') if episode_meta else 0
-                if not runtime: continue
-                series_watch_time_minutes += runtime
-                try:
-                    watch_date_str = ep_watch.get('watched_on')
-                    if not watch_date_str: continue
-                    watch_date = datetime.strptime(watch_date_str, '%Y-%m-%d')
-                    day_name = calendar.day_name[watch_date.weekday()]
-                    month_key = watch_date.strftime('%Y-%m')
-                    daily_activity[day_name]['count'] += 1
-                    daily_activity[day_name]['runtime'] += runtime
-                    monthly_activity[month_key]['count'] += 1
-                    monthly_activity[month_key]['runtime'] += runtime
-                except (ValueError, KeyError, TypeError):
-                    continue
+                series_watch_time_minutes += all_series_episodes_by_series.get(sid, {}).get(ep_id, {}).get('runtime') or 0
+                if ep_watch.get('watched_on'):
+                    try:
+                        watch_date = datetime.strptime(ep_watch['watched_on'], '%Y-%m-%d')
+                        daily_activity[calendar.day_name[watch_date.weekday()]]['count'] += 1
+                        monthly_activity[watch_date.strftime('%Y-%m')] += 1
+                    except (ValueError, KeyError, TypeError): continue
 
-    # --- Final Calculations ---
+    # --- Provider Insights (Plan to Watch) ---
+    for item_type, items in [('movies', watchlist['planned']['movies']), ('series', watchlist['planned']['series'])]:
+        for item in items:
+            providers = cache.get(item_type, {}).get(str(item['id']), {}).get('watch_providers', {}).get('flatrate', [])
+            for p in providers:
+                if p.get('name'):
+                    planned_provider_counts[p['name']] += 1
+                    provider_meta.setdefault(p['name'], {'logo_url': p.get('logo_url')})
+
+    # --- Final Formatting ---
     total_watch_time_minutes = movie_watch_time_minutes + series_watch_time_minutes
-    most_active_month = max(monthly_activity.items(), key=lambda i: i[1]['count']) if monthly_activity else ('N/A', {'count': 0})
-    day_order = list(calendar.day_name)
-    sorted_daily_activity = sorted(daily_activity.items(), key=lambda i: day_order.index(i[0]))
-    max_daily_count = max((d[1]['count'] for d in sorted_daily_activity), default=0)
     movies_time_percent = (movie_watch_time_minutes / total_watch_time_minutes * 100) if total_watch_time_minutes > 0 else 0
-    unique_movies = len({m['id'] for m in w_movies})
-    total_movie_watches = len(w_movies)
+    ratings_counter = Counter(all_ratings)
+    most_active = max(monthly_activity.items(), key=lambda i: i[1], default=('N/A', 0))
 
-    stats_data = {"total_movies": unique_movies, "total_movie_watches": total_movie_watches, "total_episodes": total_episodes_watched, "movie_watch_time_minutes": movie_watch_time_minutes, "series_watch_time_minutes": series_watch_time_minutes,
-                  "total_watch_time_minutes": total_watch_time_minutes, "total_items": len(all_ratings), "ratings_dist": dict(sorted(Counter(all_ratings).items(), key=lambda i: i[0], reverse=True)), "rewatches": total_movie_watches - unique_movies,
-                  "favorite_genres": Counter(genres).most_common(10), "favorite_actors": Counter(actors).most_common(10), "favorite_directors": Counter(d for d in directors_creators if d).most_common(10),
-                  "favorite_decades": Counter(decades).most_common(5), "daily_activity": sorted_daily_activity, "max_daily_count": max_daily_count,
-                  "most_active_month": {"month": datetime.strptime(most_active_month[0], '%Y-%m').strftime('%B %Y') if most_active_month[0] != 'N/A' else 'N/A', "count": most_active_month[1]['count']},
-                  "time_breakdown": {"movies": round(movies_time_percent), "series": round(100 - movies_time_percent), }}
+    stats_data = {
+        "total_movie_watches": len(w_movies), "total_episodes": total_episodes_watched,
+        "movie_watch_time_minutes": movie_watch_time_minutes, "series_watch_time_minutes": series_watch_time_minutes,
+        "total_watch_time_minutes": total_watch_time_minutes,
+        "time_breakdown": {"movies": round(movies_time_percent), "series": round(100 - movies_time_percent)},
+        "daily_activity": sorted(daily_activity.items(), key=lambda i: list(calendar.day_name).index(i[0])),
+        "max_daily_count": max((d['count'] for d in daily_activity.values()), default=0),
+        "most_active_month": {"month": datetime.strptime(most_active[0], '%Y-%m').strftime('%B %Y') if most_active[0] != 'N/A' else 'N/A', "count": most_active[1]},
+        "favorite_genres": sorted(genre_scores.items(), key=lambda i: i[1], reverse=True)[:10],
+        "favorite_actors": sorted(actor_scores.items(), key=lambda i: i[1], reverse=True)[:10],
+        "favorite_directors": sorted(director_creator_scores.items(), key=lambda i: i[1], reverse=True)[:10],
+        "favorite_decades": sorted(decade_scores.items(), key=lambda i: i[1], reverse=True)[:5],
+        "ratings_dist": {i: ratings_counter.get(i, 0) for i in range(5, 0, -1)},
+        "max_rating_count": max(ratings_counter.values()) if ratings_counter else 0,
+        "planned_providers": [{'name': n, 'count': c, 'logo_url': provider_meta.get(n, {}).get('logo_url')} for n, c in sorted(planned_provider_counts.items(), key=lambda i: i[1], reverse=True)[:5]],
+        "watched_providers": [{'name': n, 'score': s, 'logo_url': provider_meta.get(n, {}).get('logo_url')} for n, s in sorted(watched_provider_scores.items(), key=lambda i: i[1], reverse=True)[:5]]
+    }
     return render_template('stats.html', stats=stats_data)
 
 @bp.route('/profile', methods=['GET', 'POST'])
 def profile():
     watchlist = data_manager.load_watchlist()
-
     if request.method == 'POST':
-        # Get list of provider IDs from the form. The 'int' conversion is important.
         provider_ids = [int(pid) for pid in request.form.getlist('provider_ids')]
         watchlist['user_preferences']['providers'] = provider_ids
         data_manager.save_watchlist(watchlist)
         flash('Your provider preferences have been saved!', 'success')
         return redirect(url_for('main.profile'))
-
-    # For GET request
     providers = tmdb_api.get_available_providers(region='AT')
     saved_provider_ids = set(watchlist.get('user_preferences', {}).get('providers', []))
     return render_template('profile.html', providers=providers, saved_provider_ids=saved_provider_ids)
