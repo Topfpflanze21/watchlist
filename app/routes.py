@@ -15,16 +15,76 @@ bp = Blueprint('main', __name__)
 def index():
     watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
 
+    # --- From Your 'Plan to Watch' List ---
     planned_movies = watchlist['planned']['movies']
     planned_series = watchlist['planned']['series']
     random.shuffle(planned_movies)
     random.shuffle(planned_series)
 
-    p_movie_suggs = [{**cache['movies'][str(i['id'])], 'type': 'movie'} for i in planned_movies[:6] if str(i['id']) in cache['movies']]
-    p_series_suggs = [{**cache['series'][str(i['id'])], 'type': 'series'} for i in planned_series[:6] if str(i['id']) in cache['series']]
+    p_movie_suggs = [{**cache['movies'][str(i['id'])], 'type': 'movie'} for i in planned_movies[:26] if str(i['id']) in cache['movies']]
+    p_series_suggs = [{**cache['series'][str(i['id'])], 'type': 'series'} for i in planned_series[:26] if str(i['id']) in cache['series']]
 
-    return render_template('index.html', planned_movie_suggestions=p_movie_suggs, planned_series_suggestions=p_series_suggs, smart_movie_suggestions=utils.get_smart_suggestions('movies'),
-                           smart_series_suggestions=utils.get_smart_suggestions('series'))
+    # --- Continue Collections ---
+    w_m_ids = {m['id'] for m in watchlist['watched']['movies']}
+    processed_collection_ids = set()
+    continue_collection_suggestions = []
+
+    # Iterate through watched movies to find their collections
+    for movie_watch in watchlist['watched']['movies']:
+        movie_id_str = str(movie_watch.get('id'))
+        movie_cache_entry = cache.get('movies', {}).get(movie_id_str)
+
+        if movie_cache_entry and movie_cache_entry.get('collection'):
+            collection_info = movie_cache_entry['collection']
+            collection_id = collection_info.get('id')
+
+            if collection_id and collection_id not in processed_collection_ids:
+                processed_collection_ids.add(collection_id)
+                collection_details = tmdb_api.get_collection_details(collection_id)
+
+                if collection_details and len(collection_details.get('parts', [])) > 1:
+                    # Find the first unwatched movie in the collection (parts are sorted by release date)
+                    for part in collection_details.get('parts'):
+                        if part.get('id') not in w_m_ids:
+                            continue_collection_suggestions.append(part)
+                            break  # Found the next movie for this collection, move to the next
+
+    random.shuffle(continue_collection_suggestions)
+
+    # --- Continue Series ---
+    continue_series_suggestions = []
+    watched_series = watchlist.get('watched', {}).get('series', {})
+    for series_id, watch_throughs in watched_series.items():
+        if series_id not in cache.get('series', {}):
+            continue
+
+        series_meta = cache['series'][series_id]
+        total_episodes = series_meta.get('total_episode_count', 0)
+
+        # Consider the most recent watch-through for "continue watching"
+        if watch_throughs:
+            latest_watch = max(watch_throughs, key=lambda w: max((e.get('watched_on') or '0001-01-01' for e in w.get('watched_episodes', {}).values()), default='0001-01-01'))
+            watched_count = len(latest_watch.get('watched_episodes', {}))
+
+            if 0 < watched_count < total_episodes:
+                last_watched_date = max((e.get('watched_on') or '0001-01-01' for e in latest_watch.get('watched_episodes', {}).values()), default='0001-01-01')
+                continue_series_suggestions.append({
+                    **series_meta,
+                    'type': 'series',
+                    'last_watched_on': last_watched_date
+                })
+
+    # Sort by most recently watched
+    continue_series_suggestions.sort(key=lambda x: x['last_watched_on'], reverse=True)
+
+
+    return render_template('index.html',
+                           planned_movie_suggestions=p_movie_suggs,
+                           planned_series_suggestions=p_series_suggs,
+                           continue_collection_suggestions=continue_collection_suggestions[:26],
+                           continue_series_suggestions=continue_series_suggestions[:26],
+                           smart_movie_suggestions=utils.get_smart_suggestions('movies')[:26],
+                           smart_series_suggestions=utils.get_smart_suggestions('series')[:26])
 
 
 @bp.route('/movies')

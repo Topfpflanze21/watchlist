@@ -53,7 +53,13 @@
             color: #9ca3af; transition: all 0.2s; border: 2px solid transparent;
         }
         .tab-btn.active, .tab-btn:hover { background-color: #374151; color: white; }
-        .tab-btn.active { border-color: #3b82f6; }
+        .tab-btn.active[data-type="movie"],
+        .tab-btn.active[data-type="collection"] {
+            border-color: #3b82f6; /* blue-500 */
+        }
+        .tab-btn.active[data-type="series"] {
+            border-color: #a855f7; /* purple-500 */
+        }
 
         .details-scroll::-webkit-scrollbar { width: 8px; }
         .details-scroll::-webkit-scrollbar-track { background: #1f2937; }

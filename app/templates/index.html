@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    /* Hide scrollbar for clean carousel appearance */
+    .carousel-content::-webkit-scrollbar { display: none; }
+    .carousel-content { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
 <div class="text-center">
     <h1 class="text-4xl md:text-5xl font-extrabold mb-4">Welcome to Your Watchlist</h1>
     <p class="text-lg text-gray-400 mb-12">Select a category to view your collection or use the search bar to add something new.</p>
@@ -19,31 +25,51 @@
     <div class="flex flex-wrap items-end justify-between border-b-2 border-gray-700 pb-2 mb-8 gap-4">
         <h2 class="text-3xl font-bold">From Your 'Plan to Watch' List</h2>
         <div id="planned-tabs" class="flex-shrink-0 flex space-x-1 rounded-lg bg-gray-800 p-1">
-            <button class="tab-btn active" onclick="showTab('planned', 'movie', this)">Movies</button>
-            <button class="tab-btn" onclick="showTab('planned', 'series', this)">Series</button>
+            <button class="tab-btn active" data-type="movie" onclick="showTab('planned', 'movie', this)">Movies</button>
+            <button class="tab-btn" data-type="series" onclick="showTab('planned', 'series', this)">Series</button>
         </div>
     </div>
     <div id="planned-movie-content" class="tab-content">
         {% if planned_movie_suggestions %}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            {% for item in planned_movie_suggestions %}
-            <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
-                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
-                <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
-            </a>
-            {% endfor %}
+        <div class="carousel-container relative">
+            <button class="carousel-prev absolute top-1/2 -translate-y-1/2 left-0 -translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="carousel-content flex overflow-x-auto scroll-smooth snap-x snap-mandatory py-4 -mx-4 px-4">
+                {% for item in planned_movie_suggestions %}
+                <div class="carousel-item flex-shrink-0 w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 xl:w-1/6 snap-start px-3">
+                    <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card block rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl h-full">
+                        <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                        <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            <button class="carousel-next absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
         </div>
         {% else %}<p class="text-gray-400">No movie suggestions from your 'Plan to Watch' list.</p>{% endif %}
     </div>
     <div id="planned-series-content" class="tab-content" style="display: none;">
         {% if planned_series_suggestions %}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            {% for item in planned_series_suggestions %}
-            <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
-                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
-                <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
-            </a>
-            {% endfor %}
+         <div class="carousel-container relative">
+            <button class="carousel-prev absolute top-1/2 -translate-y-1/2 left-0 -translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="carousel-content flex overflow-x-auto scroll-smooth snap-x snap-mandatory py-4 -mx-4 px-4">
+                {% for item in planned_series_suggestions %}
+                <div class="carousel-item flex-shrink-0 w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 xl:w-1/6 snap-start px-3">
+                    <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card block rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl h-full">
+                        <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                        <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            <button class="carousel-next absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
         </div>
         {% else %}<p class="text-gray-400">No series suggestions from your 'Plan to Watch' list.</p>{% endif %}
     </div>
@@ -51,35 +77,175 @@
 
 <div class="mt-20 text-left">
     <div class="flex flex-wrap items-end justify-between border-b-2 border-gray-700 pb-2 mb-8 gap-4">
+        <h2 class="text-3xl font-bold">Continue Watching</h2>
+        <div id="continue-tabs" class="flex-shrink-0 flex space-x-1 rounded-lg bg-gray-800 p-1">
+            <button class="tab-btn active" data-type="collection" onclick="showTab('continue', 'collection', this)">Movies</button>
+            <button class="tab-btn" data-type="series" onclick="showTab('continue', 'series', this)">Series</button>
+        </div>
+    </div>
+    <div id="continue-collection-content" class="tab-content">
+        {% if continue_collection_suggestions %}
+        <div class="carousel-container relative">
+            <button class="carousel-prev absolute top-1/2 -translate-y-1/2 left-0 -translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="carousel-content flex overflow-x-auto scroll-smooth snap-x snap-mandatory py-4 -mx-4 px-4">
+                {% for item in continue_collection_suggestions %}
+                <div class="carousel-item flex-shrink-0 w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 xl:w-1/6 snap-start px-3">
+                    <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card block rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl h-full">
+                        <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                        <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            <button class="carousel-next absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+        </div>
+        {% else %}
+        <p class="text-gray-400">No collections to continue. Watch a movie that's part of a collection to see suggestions here!</p>
+        {% endif %}
+    </div>
+    <div id="continue-series-content" class="tab-content" style="display: none;">
+        {% if continue_series_suggestions %}
+        <div class="carousel-container relative">
+            <button class="carousel-prev absolute top-1/2 -translate-y-1/2 left-0 -translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="carousel-content flex overflow-x-auto scroll-smooth snap-x snap-mandatory py-4 -mx-4 px-4">
+                {% for item in continue_series_suggestions %}
+                <div class="carousel-item flex-shrink-0 w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 xl:w-1/6 snap-start px-3">
+                    <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card block rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl h-full">
+                        <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                        <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            <button class="carousel-next absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+        </div>
+        {% else %}
+        <p class="text-gray-400">You have no series in progress. Start watching a series to see it here!</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-20 text-left">
+    <div class="flex flex-wrap items-end justify-between border-b-2 border-gray-700 pb-2 mb-8 gap-4">
         <h2 class="text-3xl font-bold">You Might Like These</h2>
         <div id="smart-tabs" class="flex-shrink-0 flex space-x-1 rounded-lg bg-gray-800 p-1">
-            <button class="tab-btn active" onclick="showTab('smart', 'movie', this)">Movies</button>
-            <button class="tab-btn" onclick="showTab('smart', 'series', this)">Series</button>
+            <button class="tab-btn active" data-type="movie" onclick="showTab('smart', 'movie', this)">Movies</button>
+            <button class="tab-btn" data-type="series" onclick="showTab('smart', 'series', this)">Series</button>
         </div>
     </div>
     <div id="smart-movie-content" class="tab-content">
         {% if smart_movie_suggestions %}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            {% for item in smart_movie_suggestions %}
-            <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
-                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
-                <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
-            </a>
-            {% endfor %}
+        <div class="carousel-container relative">
+            <button class="carousel-prev absolute top-1/2 -translate-y-1/2 left-0 -translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="carousel-content flex overflow-x-auto scroll-smooth snap-x snap-mandatory py-4 -mx-4 px-4">
+                {% for item in smart_movie_suggestions %}
+                <div class="carousel-item flex-shrink-0 w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 xl:w-1/6 snap-start px-3">
+                    <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card block rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl h-full">
+                        <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                        <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            <button class="carousel-next absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
         </div>
         {% else %}<p class="text-gray-400">Watch some movies to get personalized suggestions!</p>{% endif %}
     </div>
     <div id="smart-series-content" class="tab-content" style="display: none;">
         {% if smart_series_suggestions %}
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            {% for item in smart_series_suggestions %}
-            <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl">
-                <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
-                <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
-            </a>
-            {% endfor %}
+        <div class="carousel-container relative">
+            <button class="carousel-prev absolute top-1/2 -translate-y-1/2 left-0 -translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="carousel-content flex overflow-x-auto scroll-smooth snap-x snap-mandatory py-4 -mx-4 px-4">
+                {% for item in smart_series_suggestions %}
+                <div class="carousel-item flex-shrink-0 w-1/2 sm:w-1/3 md:w-1/4 lg:w-1/5 xl:w-1/6 snap-start px-3">
+                    <a href="{{ url_for('main.item_detail', item_type=item.type, item_id=item.id) }}" class="card block rounded-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 shadow-lg hover:shadow-2xl h-full">
+                        <img src="{{ item.poster_url }}" alt="Poster for {{ item.title }}" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';" class="w-full h-auto object-cover aspect-[2/3]">
+                        <div class="p-4"><h3 class="font-bold text-lg truncate">{{ item.title }}</h3><p class="text-sm text-gray-400">{{ item.year }}</p></div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            <button class="carousel-next absolute top-1/2 -translate-y-1/2 right-0 translate-x-1/2 z-20 bg-gray-800/80 hover:bg-gray-700 text-white rounded-full h-12 w-12 flex items-center justify-center transition-opacity" hidden>
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
         </div>
         {% else %}<p class="text-gray-400">Watch some series to get personalized suggestions!</p>{% endif %}
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const setupCarousel = (container) => {
+        const content = container.querySelector('.carousel-content');
+        const nextBtn = container.querySelector('.carousel-next');
+        const prevBtn = container.querySelector('.carousel-prev');
+
+        if (!content || !nextBtn || !prevBtn) return;
+
+        const updateButtons = () => {
+            // Do nothing if the carousel is hidden (e.g. in an inactive tab)
+            if (!content.offsetParent) return;
+
+            const scrollLeft = content.scrollLeft;
+            const scrollWidth = content.scrollWidth;
+            const clientWidth = content.clientWidth;
+
+            // Use the 'hidden' attribute for more robust show/hide
+            prevBtn.hidden = (scrollLeft <= 0);
+            // Use Math.ceil to handle potential floating point inconsistencies
+            nextBtn.hidden = (Math.ceil(scrollLeft) + clientWidth >= scrollWidth);
+        };
+
+        nextBtn.addEventListener('click', () => {
+            // Scroll by 80% of the visible width for a smoother experience
+            content.scrollBy({ left: content.clientWidth * 0.8, behavior: 'smooth' });
+        });
+
+        prevBtn.addEventListener('click', () => {
+            content.scrollBy({ left: -content.clientWidth * 0.8, behavior: 'smooth' });
+        });
+
+        // Update buttons on scroll, and use a ResizeObserver to handle layout changes
+        content.addEventListener('scroll', updateButtons, { passive: true });
+        new ResizeObserver(updateButtons).observe(content);
+
+        // Initial check to set button visibility correctly after a short delay
+        setTimeout(() => updateButtons(), 50);
+    };
+
+    // Set up all carousels that are initially visible
+    document.querySelectorAll('.carousel-container').forEach(setupCarousel);
+
+    // Get a reference to the original showTab function from base.html
+    const originalShowTab = window.showTab;
+
+    // Redefine the function to add our carousel setup logic
+    window.showTab = (section, type, clickedButton) => {
+        // Call the original function to handle the actual tab switching
+        originalShowTab(section, type, clickedButton);
+
+        // After the tab switch, find the newly visible carousel containers and set them up
+        setTimeout(() => {
+            const activePanel = document.getElementById(`${section}-${type}-content`);
+            if (activePanel) {
+                activePanel.querySelectorAll('.carousel-container').forEach(setupCarousel);
+            }
+        }, 50); // A small delay ensures the tab content is visible before calculations
+    };
+});
+</script>
 {% endblock %}

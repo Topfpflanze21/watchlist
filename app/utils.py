@@ -101,4 +101,4 @@ def get_smart_suggestions(item_type):
             continue
 
     sorted_recs = sorted(scores.items(), key=lambda i: i[1], reverse=True)
-    return [recommendation_data[id] for id, score in sorted_recs[:12]]
+    return [recommendation_data[id] for id, score in sorted_recs]
