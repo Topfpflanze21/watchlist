@@ -15,41 +15,15 @@ bp = Blueprint('main', __name__)
 def index():
     watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
 
-    # --- From Your 'Plan to Watch' List ---
-    planned_movies = watchlist['planned']['movies']
-    planned_series = watchlist['planned']['series']
-    random.shuffle(planned_movies)
-    random.shuffle(planned_series)
+    # --- From Your 'Plan to Watch' List (Weighted Suggestions) ---
+    sorted_planned_movies = utils.get_weighted_planned_suggestions('movie', watchlist, cache)
+    sorted_planned_series = utils.get_weighted_planned_suggestions('series', watchlist, cache)
 
-    p_movie_suggs = [{**cache['movies'][str(i['id'])], 'type': 'movie'} for i in planned_movies[:26] if str(i['id']) in cache['movies']]
-    p_series_suggs = [{**cache['series'][str(i['id'])], 'type': 'series'} for i in planned_series[:26] if str(i['id']) in cache['series']]
+    p_movie_suggs = [{**cache['movies'][str(i['id'])], 'type': 'movie'} for i in sorted_planned_movies[:26] if str(i['id']) in cache['movies']]
+    p_series_suggs = [{**cache['series'][str(i['id'])], 'type': 'series'} for i in sorted_planned_series[:26] if str(i['id']) in cache['series']]
 
     # --- Continue Collections ---
-    w_m_ids = {m['id'] for m in watchlist['watched']['movies']}
-    processed_collection_ids = set()
-    continue_collection_suggestions = []
-
-    # Iterate through watched movies to find their collections
-    for movie_watch in watchlist['watched']['movies']:
-        movie_id_str = str(movie_watch.get('id'))
-        movie_cache_entry = cache.get('movies', {}).get(movie_id_str)
-
-        if movie_cache_entry and movie_cache_entry.get('collection'):
-            collection_info = movie_cache_entry['collection']
-            collection_id = collection_info.get('id')
-
-            if collection_id and collection_id not in processed_collection_ids:
-                processed_collection_ids.add(collection_id)
-                collection_details = tmdb_api.get_collection_details(collection_id)
-
-                if collection_details and len(collection_details.get('parts', [])) > 1:
-                    # Find the first unwatched movie in the collection (parts are sorted by release date)
-                    for part in collection_details.get('parts'):
-                        if part.get('id') not in w_m_ids:
-                            continue_collection_suggestions.append(part)
-                            break  # Found the next movie for this collection, move to the next
-
-    random.shuffle(continue_collection_suggestions)
+    continue_collection_suggestions = utils.get_continue_collection_suggestions(watchlist, cache)
 
     # --- Continue Series ---
     continue_series_suggestions = []
@@ -74,8 +48,8 @@ def index():
                     'last_watched_on': last_watched_date
                 })
 
-    # Sort by most recently watched
-    continue_series_suggestions.sort(key=lambda x: x['last_watched_on'], reverse=True)
+    # Sort by oldest watched series first
+    continue_series_suggestions.sort(key=lambda x: x['last_watched_on'], reverse=False)
 
 
     return render_template('index.html',
