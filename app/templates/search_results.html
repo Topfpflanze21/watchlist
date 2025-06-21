@@ -20,7 +20,7 @@
                     </div>
                 </div>
             {% else %}
-                <form action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=url_for('main.show_search_results', q=query)) }}" method="POST" class="absolute top-2 right-2 z-20">
+                <form action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id, title=item.title, origin=url_for('main.show_search_results', q=query)) }}" method="POST" class="absolute top-2 right-2 z-20 ajax-form">
                      <input type="hidden" name="action" value="plan">
                      <button type="submit" title="Add to Plan to Watch" class="bg-black bg-opacity-50 hover:bg-opacity-75 rounded-full p-2 transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
@@ -46,4 +46,47 @@
     <a href="{{ url_for('main.index') }}" class="btn mt-6">Back to Home</a>
 </div>
 {% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.addEventListener('submit', async (e) => {
+        const form = e.target;
+        if (form.matches('.ajax-form')) {
+            e.preventDefault();
+            const button = form.querySelector('button[type="submit"]');
+            if (button) button.disabled = true;
+
+            const formData = new FormData(form);
+            const url = form.getAttribute('action');
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: new URLSearchParams(formData)
+                });
+
+                if (!response.ok) throw new Error(`Network response was not ok. Status: ${response.status}`);
+
+                const data = await response.json();
+
+                if (data.status === 'success' && data.action === 'plan' && data.is_planned) {
+                    const newIcon = document.createElement('div');
+                    newIcon.className = 'absolute top-2 right-2 z-20';
+                    newIcon.title = 'In Plan to Watch';
+                    newIcon.innerHTML = `
+                        <div class="bg-blue-600 bg-opacity-80 rounded-full p-2 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                        </div>
+                    `;
+                    form.replaceWith(newIcon);
+                }
+            } catch (error) {
+                console.error('AJAX error:', error);
+                alert('An error occurred while adding to your watchlist.');
+                if (button) button.disabled = false;
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

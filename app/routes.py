@@ -232,8 +232,27 @@ def item_detail_action(item_type, item_id):
         return redirect(origin)
 
     response_data = {'status': 'success', 'action': action}
-    # Populate response data for AJAX requests...
-    # ... (this part can remain largely the same)
+    if action in ['plan', 'remove_plan']:
+        is_planned_after_action = any(i.get('id') == item_id for i in watchlist['planned'][internal])
+        response_data['is_planned'] = is_planned_after_action
+
+    if action == 'toggle_episode':
+        response_data['is_planned'] = any(i.get('id') == item_id for i in watchlist['planned']['series'])
+        watch_through = next((w for w_list in watchlist['watched']['series'].get(sid, []) for w in [w_list] if w.get('series_watch_id') == request.form.get('series_watch_id')), None)
+        if watch_through:
+            response_data['is_episode_watched'] = request.form.get('episode_id') in watch_through.get('watched_episodes', {})
+            response_data['watched_on'] = watch_through.get('watched_episodes', {}).get(request.form.get('episode_id'), {}).get('watched_on')
+            response_data['watched_episode_count'] = len(watch_through.get('watched_episodes', {}))
+            series_details = tmdb_api.get_series_details(item_id)
+            response_data['total_episode_count'] = series_details.get('total_episode_count')
+            response_data['series_watch_id'] = request.form.get('series_watch_id')
+
+    if action == 'delete_watch_instance':
+        response_data['watch_id'] = request.form.get('watch_id')
+
+    if action == 'edit_watch_instance':
+        response_data['watch_id'] = request.form.get('watch_id')
+
     return jsonify(response_data)
 
 
