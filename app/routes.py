@@ -452,3 +452,20 @@ def stats():
                   "most_active_month": {"month": datetime.strptime(most_active_month[0], '%Y-%m').strftime('%B %Y') if most_active_month[0] != 'N/A' else 'N/A', "count": most_active_month[1]['count']},
                   "time_breakdown": {"movies": round(movies_time_percent), "series": round(100 - movies_time_percent), }}
     return render_template('stats.html', stats=stats_data)
+
+@bp.route('/profile', methods=['GET', 'POST'])
+def profile():
+    watchlist = data_manager.load_watchlist()
+
+    if request.method == 'POST':
+        # Get list of provider IDs from the form. The 'int' conversion is important.
+        provider_ids = [int(pid) for pid in request.form.getlist('provider_ids')]
+        watchlist['user_preferences']['providers'] = provider_ids
+        data_manager.save_watchlist(watchlist)
+        flash('Your provider preferences have been saved!', 'success')
+        return redirect(url_for('main.profile'))
+
+    # For GET request
+    providers = tmdb_api.get_available_providers(region='AT')
+    saved_provider_ids = set(watchlist.get('user_preferences', {}).get('providers', []))
+    return render_template('profile.html', providers=providers, saved_provider_ids=saved_provider_ids)

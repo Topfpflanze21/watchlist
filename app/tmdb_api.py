@@ -124,3 +124,43 @@ def get_series_details(series_id):
     except requests.RequestException as e:
         print(f"Error fetching series details for ID {series_id}: {e}")
         return None
+
+def get_available_providers(region='AT'):
+    """Fetches a combined list of movie and TV watch providers for a given region."""
+    cache = data_manager.load_cache()
+    if 'providers_cache' in cache and region in cache['providers_cache']:
+        return cache['providers_cache'][region]
+
+    api_key = current_app.config['TMDB_API_KEY']
+    if not api_key or api_key == "YOUR_API_KEY_HERE":
+        return []
+
+    all_providers = {}
+    image_url = current_app.config['TMDB_IMAGE_URL']
+
+    for provider_type in ['movie', 'tv']:
+        try:
+            url = f"{current_app.config['TMDB_BASE_URL']}/watch/providers/{provider_type}?api_key={api_key}&watch_region={region}"
+            res = requests.get(url)
+            res.raise_for_status()
+            data = res.json()
+            for provider in data.get('results', []):
+                provider_id = provider.get('provider_id')
+                if provider_id not in all_providers and provider.get('logo_path'):
+                    all_providers[provider_id] = {
+                        'id': provider_id,
+                        'name': provider.get('provider_name'),
+                        'logo_url': f"{image_url}{provider.get('logo_path')}"
+                    }
+        except requests.RequestException as e:
+            print(f"Error fetching {provider_type} providers for region {region}: {e}")
+            continue
+
+    sorted_providers = sorted(all_providers.values(), key=lambda x: x['name'].lower())
+
+    if 'providers_cache' not in cache:
+        cache['providers_cache'] = {}
+    cache['providers_cache'][region] = sorted_providers
+    data_manager.save_cache(cache)
+
+    return sorted_providers

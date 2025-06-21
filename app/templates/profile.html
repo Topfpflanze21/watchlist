@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-4xl font-bold mb-8 text-center">Profile Settings</h1>
+
+    <div class="card p-6 md:p-8">
+        <form method="POST">
+            <h2 class="text-2xl font-bold text-white border-b-2 border-gray-700 pb-2 mb-6">My Watch Providers</h2>
+            <p class="text-gray-400 mb-6">Select the streaming services you subscribe to. This will be used in the future to help tailor suggestions for you. (Region: AT)</p>
+
+            {% if providers %}
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {% for provider in providers %}
+                <label for="provider-{{ provider.id }}" class="flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer {% if provider.id in saved_provider_ids %} bg-blue-900/50 border-2 border-blue-500 {% else %} bg-gray-700/50 border-2 border-transparent hover:border-gray-500 {% endif %}">
+                    <input type="checkbox" name="provider_ids" value="{{ provider.id }}" id="provider-{{ provider.id }}" class="hidden" {% if provider.id in saved_provider_ids %}checked{% endif %} onchange="this.parentElement.classList.toggle('bg-blue-900/50', this.checked); this.parentElement.classList.toggle('border-blue-500', this.checked); this.parentElement.classList.toggle('bg-gray-700/50', !this.checked); this.parentElement.classList.toggle('border-transparent', !this.checked);">
+                    <img src="{{ provider.logo_url }}" alt="{{ provider.name }}" class="w-16 h-16 rounded-md object-cover mb-2">
+                    <span class="text-center text-sm font-medium">{{ provider.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-400">Could not load available watch providers. Please ensure your TMDB API key is correct.</p>
+            {% endif %}
+
+            <div class="mt-8 text-right">
+                <button type="submit" class="btn btn-secondary">Save Preferences</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -80,13 +80,18 @@
                     <a href="{{ url_for('main.stats') }}" class="nav-link text-lg px-3 {% if request.path == url_for('main.stats') %}active{% endif %}">Statistics</a>
                  </div>
             </div>
-            <div class="w-full max-w-xs">
-                <form action="{{ url_for('main.search') }}" method="post" class="relative">
-                    <input type="search" name="query" placeholder="Search to add movies & series..." class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:ring-blue-500 focus:border-blue-500" required>
-                    <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    </button>
-                </form>
+            <div class="flex items-center gap-4">
+                <div class="w-full max-w-xs">
+                    <form action="{{ url_for('main.search') }}" method="post" class="relative">
+                        <input type="search" name="query" placeholder="Search to add movies & series..." class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:ring-blue-500 focus:border-blue-500" required>
+                        <button type="submit" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </button>
+                    </form>
+                </div>
+                <a href="{{ url_for('main.profile') }}" class="nav-link {% if request.path == url_for('main.profile') %}active{% endif %}" title="Profile Settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </a>
             </div>
         </div>
     </nav>
