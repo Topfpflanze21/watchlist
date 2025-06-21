@@ -72,6 +72,11 @@ def item_detail(item_type, item_id):
         flash(f"Could not retrieve details for this {item_type}.", "error")
         return redirect(url_for(f'main.{internal_type}'))
 
+    if item_type == 'movie' and details.get('collection'):
+        collection_details = tmdb_api.get_collection_details(details['collection']['id'])
+        if not collection_details or len(collection_details.get('parts', [])) <= 1:
+            details['collection'] = None
+
     watchlist = data_manager.load_watchlist()
     today = datetime.now().strftime('%Y-%m-%d')
     item_to_show = {**details, 'type': item_type}
@@ -337,11 +342,13 @@ def collections():
                     if full_collection_details and full_collection_details.get('parts'):
                         parts = full_collection_details.get('parts', [])
                         total_count = len(parts)
-                        watched_count = sum(1 for part in parts if part.get('id') in w_m_ids)
 
-                        image_url = current_app.config['TMDB_IMAGE_URL']
-                        poster_path = collection_info.get('poster_path')
-                        collections_dict[collection_id] = {'id': collection_id, 'name': collection_info.get('name'), 'poster_url': f"{image_url}{poster_path}" if poster_path else "", 'watched_count': watched_count, 'total_count': total_count}
+                        if total_count > 1:
+                            watched_count = sum(1 for part in parts if part.get('id') in w_m_ids)
+
+                            image_url = current_app.config['TMDB_IMAGE_URL']
+                            poster_path = collection_info.get('poster_path')
+                            collections_dict[collection_id] = {'id': collection_id, 'name': collection_info.get('name'), 'poster_url': f"{image_url}{poster_path}" if poster_path else "", 'watched_count': watched_count, 'total_count': total_count}
 
     # Separate collections into completed and in-progress lists
     all_collections = sorted(collections_dict.values(), key=lambda x: x.get('name', ''))

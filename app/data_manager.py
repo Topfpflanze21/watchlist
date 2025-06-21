@@ -86,7 +86,7 @@ def save_watchlist(data):
 
 def load_cache():
     """Loads the metadata cache."""
-    return load_json_file(current_app.config['CACHE_FILE'], {"movies": {}, "series": {}, "providers_cache": {}})
+    return load_json_file(current_app.config['CACHE_FILE'], {"movies": {}, "series": {}, "providers_cache": {}, "collections": {}})
 
 
 def save_cache(data):

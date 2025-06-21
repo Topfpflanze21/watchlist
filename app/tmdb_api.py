@@ -55,6 +55,10 @@ def get_movie_details(movie_id):
 
 def get_collection_details(collection_id):
     """Fetches details for a movie collection from TMDB."""
+    cache = data_manager.load_cache()
+    if str(collection_id) in cache.get('collections', {}):
+        return cache['collections'][str(collection_id)]
+
     api_key = current_app.config['TMDB_API_KEY']
     if not api_key or api_key == "YOUR_API_KEY_HERE":
         return None
@@ -70,6 +74,11 @@ def get_collection_details(collection_id):
 
         data = {"id": d.get("id"), "name": d.get("name"), "overview": d.get("overview"), "poster_url": f"{image_url}{d.get('poster_path')}" if d.get('poster_path') else "",
             "parts": [{"id": p.get("id"), "title": p.get("title"), "year": p.get("release_date", "")[:4], "poster_url": f"{image_url}{p.get('poster_path')}" if p.get('poster_path') else "", "type": "movie"} for p in parts if p.get('poster_path')]}
+
+        if 'collections' not in cache:
+            cache['collections'] = {}
+        cache['collections'][str(collection_id)] = data
+        data_manager.save_cache(cache)
         return data
     except requests.RequestException as e:
         print(f"Error fetching collection details for ID {collection_id}: {e}")
