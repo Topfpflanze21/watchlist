@@ -8,20 +8,52 @@
     </a>
 </div>
 
-<div class="md:flex gap-8 mb-12">
-    {% if collection.poster_url %}
-    <div class="md:w-1/4 md:max-w-xs flex-shrink-0">
-         <img src="{{ collection.poster_url }}" alt="Poster for {{ collection.name }}" class="w-full h-auto object-cover rounded-md shadow-lg" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';">
-    </div>
-    {% endif %}
-    <div class="flex-grow mt-6 md:mt-0">
-        <h1 class="text-4xl font-bold mb-4">{{ collection.name }}</h1>
-        {% if collection.overview %}
-        <p class="text-gray-300">{{ collection.overview }}</p>
-        {% endif %}
+{% if collection.parts %}
+    {% set watched_count = collection.parts | selectattr('status', 'equalto', 'watched') | list | length %}
+    {% set total_count = collection.parts | length %}
+    {% set progress_percent = (watched_count / total_count * 100)|round if total_count > 0 else 0 %}
+{% endif %}
+
+<div class="card rounded-lg overflow-hidden mb-12">
+    <div class="md:flex">
+        <div class="md:w-1/3 md:max-w-sm flex-shrink-0 bg-gray-800 p-6 flex flex-col items-center justify-center">
+            {% if collection.poster_url %}
+             <img src="{{ collection.poster_url }}" alt="Poster for {{ collection.name }}" class="w-full h-auto object-cover rounded-md shadow-lg" onerror="this.onerror=null;this.src='https://placehold.co/500x750/1f2937/d1d5db?text=No+Image';">
+            {% else %}
+             <div class="w-full h-full flex items-center justify-center bg-gray-700 rounded-md">
+                <p class="text-gray-400">No Image Available</p>
+             </div>
+            {% endif %}
+        </div>
+        <div class="p-6 md:p-8 flex flex-col flex-grow">
+            <h1 class="text-4xl font-bold mb-4">{{ collection.name }}</h1>
+
+            {% if collection.parts and total_count > 0 %}
+            <div class="my-4">
+                <div class="flex justify-between items-center mb-1">
+                     <h3 class="text-lg font-bold">Completion Progress</h3>
+                     <span class="text-sm font-semibold text-gray-300">{{ watched_count }} of {{ total_count }} Watched</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-3.5" title="{{ progress_percent }}% complete">
+                    <div class="bg-blue-600 h-3.5 rounded-full flex items-center justify-center text-white font-bold text-xs" style="width: {{ progress_percent }}%;">
+                        {% if progress_percent > 15 %}{{ progress_percent }}%{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if collection.overview %}
+            <div class="mt-4">
+                <h3 class="text-lg font-bold mb-2">Overview</h3>
+                <p class="text-gray-300 text-md">{{ collection.overview }}</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
+
+<h2 class="text-3xl font-bold mb-6 text-white border-b-2 border-gray-700 pb-2">Movies in this Collection</h2>
 
 {% if collection.parts %}
 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">

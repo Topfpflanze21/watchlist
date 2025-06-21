@@ -92,3 +92,24 @@ def load_cache():
 def save_cache(data):
     """Saves the metadata cache."""
     save_json_file(current_app.config['CACHE_FILE'], data)
+
+
+def load_suggestions_cache():
+    """Loads the suggestions cache."""
+    return load_json_file(current_app.config['SUGGESTIONS_CACHE_FILE'], {})
+
+
+def save_suggestions_cache(data):
+    """Saves the suggestions cache."""
+    save_json_file(current_app.config['SUGGESTIONS_CACHE_FILE'], data)
+
+
+def clear_suggestions_cache():
+    """Deletes the suggestions cache file to invalidate it."""
+    cache_file = current_app.config.get('SUGGESTIONS_CACHE_FILE')
+    if cache_file and os.path.exists(cache_file):
+        try:
+            os.remove(cache_file)
+            print("Suggestions cache cleared.")
+        except OSError as e:
+            print(f"Error clearing suggestions cache: {e}")
