@@ -178,7 +178,7 @@
     <div class="p-4 md:p-6 border-t-2 border-gray-700">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-3xl font-bold">Watch History</h2>
-            <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}">
+            <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}" class="ajax-form">
                 <input type="hidden" name="action" value="start_new_series_watch">
                 <button type="submit" class="btn btn-secondary flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14" /></svg>
@@ -223,7 +223,7 @@
                                {% for i in range(5, 0, -1) %}<input type="radio" id="rating-{{ i }}-{{ watch.series_watch_id }}" name="rating" value="{{ i }}" {% if i == current_rating %}checked{% endif %}><label for="rating-{{ i }}-{{ watch.series_watch_id }}" class="!p-1"><span class="star !text-xl">★</span></label>{% endfor %}
                            </div></div>
                        </form>
-                       <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}">
+                       <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}" class="ajax-form">
                            <input type="hidden" name="action" value="delete_series_watch">
                            <input type="hidden" name="series_watch_id" value="{{ watch.series_watch_id }}">
                            <button type="submit" data-confirm="Delete this entire watch history? This action is permanent." data-confirm-btn-text="Delete" data-confirm-btn-class="btn-danger" class="btn btn-danger flex-shrink-0 flex items-center justify-center !p-3" title="Delete this watch history">
@@ -243,16 +243,17 @@
                      <div class="flex items-center gap-2">
                            {% if total_count > 0 %}
                                {% if watched_count < total_count %}
-                               <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}" class="flex items-center gap-2 watch-action-form">
+                               <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}" class="flex items-center gap-2 watch-action-form ajax-form">
                                    <input type="hidden" name="action" value="watch_all_episodes">
                                    <input type="hidden" name="series_watch_id" value="{{ watch.series_watch_id }}">
                                    <input type="hidden" name="watched_on" value="">
                                    <button type="submit" data-confirm="Are you sure you want to mark all episodes as watched for this session?" data-confirm-btn-text="Watch All" data-confirm-btn-class="!bg-green-700 hover:!bg-green-600" class="btn !bg-green-700 hover:!bg-green-600 !py-1 !px-3 text-sm whitespace-nowrap">Watch All</button>
                                </form>
                                {% elif watched_count > 0 %}
-                               <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}" class="flex items-center gap-2">
+                               <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}" class="flex items-center gap-2 watch-action-form ajax-form">
                                    <input type="hidden" name="action" value="unwatch_all_episodes">
                                    <input type="hidden" name="series_watch_id" value="{{ watch.series_watch_id }}">
+                                   <input type="hidden" name="watched_on" value="">
                                    <button type="submit" data-confirm="Are you sure you want to mark all episodes as unwatched for this session?" data-confirm-btn-text="Unwatch All" data-confirm-btn-class="btn-danger" class="btn btn-danger !py-1 !px-3 text-sm whitespace-nowrap">Unwatch All</button>
                                </form>
                                {% endif %}
@@ -269,13 +270,13 @@
                         <div class="flex items-center gap-4">
                             {% if season.episode_count > 0 %}
                                 {% if watched_in_season|length < season.episode_count %}
-                                <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}" class="watch-action-form">
+                                <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}" class="watch-action-form ajax-form">
                                     <input type="hidden" name="action" value="watch_season"><input type="hidden" name="series_watch_id" value="{{ watch.series_watch_id }}"><input type="hidden" name="season_number" value="{{ season.season_number }}"><input type="hidden" name="watched_on" value="">
                                     <button type="submit" data-confirm="Mark all episodes in this season as watched?" data-confirm-btn-text="Watch Season" onclick="event.stopPropagation()" class="btn !py-1 !px-2 text-xs">Watch Season</button>
                                 </form>
                                 {% else %}
-                                <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}">
-                                    <input type="hidden" name="action" value="unwatch_season"><input type="hidden" name="series_watch_id" value="{{ watch.series_watch_id }}"><input type="hidden" name="season_number" value="{{ season.season_number }}">
+                                <form method="POST" action="{{ url_for('main.item_detail_action', item_type=item.type, item_id=item.id) }}" class="watch-action-form ajax-form">
+                                    <input type="hidden" name="action" value="unwatch_season"><input type="hidden" name="series_watch_id" value="{{ watch.series_watch_id }}"><input type="hidden" name="season_number" value="{{ season.season_number }}"><input type="hidden" name="watched_on" value="">
                                     <button type="submit" data-confirm="Mark all episodes in this season as unwatched?" data-confirm-btn-text="Unwatch Season" data-confirm-btn-class="btn-danger" onclick="event.stopPropagation()" class="btn btn-danger !py-1 !px-2 text-xs">Unwatch Season</button>
                                 </form>
                                 {% endif %}
@@ -467,14 +468,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleSuccess(form, data) {
         const action = data.action;
 
-        if (action === 'plan' || action === 'remove_plan') updatePlanButton(data.is_planned);
+        const pageReloadActions = [
+            'watch', 'start_new_series_watch', 'delete_series_watch',
+            'watch_season', 'unwatch_season', 'watch_all_episodes', 'unwatch_all_episodes'
+        ];
+
+        if (pageReloadActions.includes(action)) {
+            window.location.reload();
+            return;
+        }
+
+        if (action === 'plan' || action === 'remove_plan') {
+            updatePlanButton(data.is_planned);
+        }
         if (action === 'toggle_episode') {
             updateEpisodeUI(form, data);
             updateSeriesProgress(data);
             updatePlanButton(data.is_planned);
-        }
-        if (action === 'watch') {
-            window.location.reload();
         }
         if (action === 'delete_watch_instance') {
             const elementToRemove = document.querySelector(`.history-item-container[data-watch-id="${data.watch_id}"]`);

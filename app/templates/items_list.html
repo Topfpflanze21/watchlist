@@ -160,8 +160,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const titleB = b.dataset.title.toLowerCase();
                 const ratingA = parseInt(a.dataset.rating || '0', 10);
                 const ratingB = parseInt(b.dataset.rating || '0', 10);
-                const watchedA = a.dataset.lastWatched || '0';
-                const watchedB = b.dataset.lastWatched || '0';
+                const watchedA = a.dataset.lastWatched || 'N/A';
+                const watchedB = b.dataset.lastWatched || 'N/A';
                 const statusA = a.dataset.status || '';
                 const statusB = b.dataset.status || '';
                 const yearA = parseInt(a.dataset.year || '0', 10);
@@ -172,8 +172,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'title_desc': return titleB.localeCompare(titleA);
                     case 'rating_asc': return ratingA - ratingB;
                     case 'rating_desc': return ratingB - ratingA;
-                    case 'last_watched_asc': return new Date(watchedA) - new Date(watchedB);
-                    case 'last_watched_desc': return new Date(watchedB) - new Date(watchedA);
+                    case 'last_watched_asc': {
+                        if (watchedA === 'N/A' && watchedB === 'N/A') return 0;
+                        if (watchedA === 'N/A') return 1;
+                        if (watchedB === 'N/A') return -1;
+                        return new Date(watchedA) - new Date(watchedB);
+                    }
+                    case 'last_watched_desc': {
+                        if (watchedA === 'N/A' && watchedB === 'N/A') return 0;
+                        if (watchedA === 'N/A') return 1;
+                        if (watchedB === 'N/A') return -1;
+                        return new Date(watchedB) - new Date(watchedA);
+                    }
                     case 'year_asc': return yearA - yearB;
                     case 'year_desc': return yearB - yearA;
                     case 'status':

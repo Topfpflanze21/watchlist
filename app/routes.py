@@ -51,7 +51,7 @@ def index():
                 if 0 < watched_count < total_episodes:
                     last_watched_date = max((e.get('watched_on') or '0001-01-01' for e in latest_watch.get('watched_episodes', {}).values()), default='0001-01-01')
                     continue_series_suggestions.append({'type': 'series', **series_meta, 'last_watched_on': last_watched_date})
-        continue_series_suggestions.sort(key=lambda x: x['last_watched_on'], reverse=False)
+        continue_series_suggestions.sort(key=lambda x: x['last_watched_on'], reverse=True)
 
         smart_movie_suggestions = utils.get_smart_suggestions('movies')[:26]
         smart_series_suggestions = utils.get_smart_suggestions('series')[:26]
@@ -194,12 +194,12 @@ def item_detail_action(item_type, item_id):
         else:
             watch_through = next((w for w_list in watchlist['watched']['series'].get(sid, []) for w in [w_list] if w.get('series_watch_id') == series_watch_id), None)
             if watch_through:
-                date = request.form.get('watched_on') or None
                 if action == 'toggle_episode':
                     eid = request.form['episode_id']
                     if eid in watch_through['watched_episodes']:
                         del watch_through['watched_episodes'][eid]
                     else:
+                        date = request.form.get('watched_on') or None
                         watch_through['watched_episodes'][eid] = {"watched_on": date}
                     should_clear_cache = True
                 elif action == 'rate_series':
@@ -216,7 +216,8 @@ def item_detail_action(item_type, item_id):
                         else:
                             episode_ids = [ep['id'] for s in details.get('seasons', []) for ep in s.get('episodes', [])]
 
-                        if 'watch' in action:
+                        if action in ['watch_season', 'watch_all_episodes']:
+                            date = request.form.get('watched_on') or None
                             for eid in episode_ids:
                                 if eid not in watch_through['watched_episodes']: watch_through['watched_episodes'][eid] = {"watched_on": date}
                         else:
@@ -228,7 +229,7 @@ def item_detail_action(item_type, item_id):
         data_manager.save_watchlist(watchlist)
         data_manager.clear_suggestions_cache()
 
-    if action in ['delete_all', 'delete_series_watch'] or (item_type == 'series' and action in ['start_new_series_watch', 'watch_season', 'unwatch_season', 'watch_all_episodes', 'unwatch_all_episodes']):
+    if action == 'delete_all':
         return redirect(origin)
 
     response_data = {'status': 'success', 'action': action}
