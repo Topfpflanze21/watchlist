@@ -373,3 +373,23 @@ def import_watchlist():
     else:
         flash('Invalid file type. Please upload a .json file.', 'error')
     return redirect(url_for('main.profile'))
+
+@bp.route('/clear_watchlist', methods=['POST'])
+@login_required
+def clear_watchlist():
+    if data_manager.clear_user_data():
+        flash('Your watchlist data has been successfully cleared.', 'success')
+    else:
+        flash('There was an error clearing your watchlist data.', 'error')
+    return redirect(url_for('main.profile'))
+
+@bp.route('/delete_account', methods=['POST'])
+@login_required
+def delete_account():
+    user_to_delete = current_user
+    logout_user()
+    if data_manager.delete_user(user_to_delete.id):
+        flash(f'Account "{user_to_delete.username}" has been permanently deleted.', 'success')
+    else:
+        flash('There was an error deleting your account.', 'error')
+    return redirect(url_for('main.index'))

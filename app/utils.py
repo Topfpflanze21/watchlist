@@ -329,7 +329,7 @@ def generate_collections_page_suggestions(watchlist, cache):
     all_collections = sorted(collections_dict.values(), key=lambda x: x.get('name', ''))
     completed_collections = [c for c in all_collections if c['watched_count'] == c['total_count']]
     in_progress_collections = [c for c in all_collections if c['watched_count'] != c['total_count']]
-    return {'completed': completed_collections, 'in_progress': in_progress_collections}
+    return {'completed_collections': completed_collections, 'in_progress_collections': in_progress_collections}
 
 def get_smart_suggestions(item_type):
     """Generates personalized suggestions based on watched items."""

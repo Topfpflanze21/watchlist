@@ -52,6 +52,40 @@
             </div>
         </button>
     </div>
+
+    <div class="mt-12">
+        <h2 class="text-2xl font-bold text-red-500 border-b-2 border-red-500/30 pb-3 mb-6">Danger Zone</h2>
+        <div class="card p-6 rounded-xl border-red-500/50 bg-red-900/20 space-y-6 md:space-y-0 md:flex md:items-center md:justify-between">
+            <div>
+                <h3 class="font-bold text-lg text-white">Clear Watchlist Data</h3>
+                <p class="text-gray-400 text-sm max-w-lg">Permanently delete your entire watchlist, including all watched history, planned items, and cached metadata. This cannot be undone.</p>
+            </div>
+            <form action="{{ url_for('main.clear_watchlist') }}" method="POST">
+                <button type="submit"
+                        class="btn btn-danger"
+                        data-confirm="Are you sure you want to permanently clear your entire watchlist? This action cannot be undone."
+                        data-confirm-btn-text="Clear Data"
+                        data-confirm-btn-class="btn-danger">
+                    Clear Watchlist
+                </button>
+            </form>
+        </div>
+        <div class="card p-6 rounded-xl border-red-500/50 bg-red-900/20 mt-6 space-y-6 md:space-y-0 md:flex md:items-center md:justify-between">
+            <div>
+                <h3 class="font-bold text-lg text-white">Delete Account</h3>
+                <p class="text-gray-400 text-sm max-w-lg">Permanently delete your account and all associated data, including your watchlist and user profile. This action is irreversible.</p>
+            </div>
+             <form action="{{ url_for('main.delete_account') }}" method="POST">
+                <button type="submit"
+                        class="btn btn-danger"
+                        data-confirm="Are you absolutely sure you want to delete your account? All your data will be permanently lost. This action is irreversible."
+                        data-confirm-btn-text="Delete My Account"
+                        data-confirm-btn-class="btn-danger">
+                    Delete Account
+                </button>
+            </form>
+        </div>
+    </div>
 </div>
 
 <div id="import-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[999] hidden p-4">
@@ -85,83 +119,63 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Modal Handling for File Selection ---
+    // --- Setup for Import Modal ---
     const openBtn = document.getElementById('open-import-modal-btn');
     const closeBtn = document.getElementById('close-import-modal-btn');
     const importModal = document.getElementById('import-modal');
-
-    if (openBtn && importModal) {
-        openBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            importModal.classList.remove('hidden');
-        });
-    }
-
-    const closeModal = () => {
-        if (importModal) {
-            importModal.classList.add('hidden');
-        }
-    };
-
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeModal);
-    }
-
-    if (importModal) {
-        importModal.addEventListener('click', (e) => {
-            if (e.target === importModal) {
-                closeModal();
-            }
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !importModal.classList.contains('hidden')) {
-                closeModal();
-            }
-        });
-    }
-
-    // --- Loading Animation and Form Submission ---
-    const importForm = document.getElementById('import-form');
     const progressModal = document.getElementById('progress-modal');
-    const progressMessage = document.getElementById('progress-message');
-    const fileInput = document.getElementById('watchlist_file');
 
-    importForm.addEventListener('submit', function(e) {
+    // Show/Hide the file selection modal
+    openBtn?.addEventListener('click', (e) => {
         e.preventDefault();
+        importModal?.classList.remove('hidden');
+    });
+    closeBtn?.addEventListener('click', () => importModal?.classList.add('hidden'));
+    importModal?.addEventListener('click', (e) => {
+        if (e.target === importModal) importModal.classList.add('hidden');
+    });
 
-        if (!fileInput.files || fileInput.files.length === 0) {
-            alert("Please select a file to import.");
-            return;
-        }
+    // --- Handling Form Submissions on this Page ---
+    document.body.addEventListener('submit', e => {
+        const form = e.target;
+        const submitter = e.submitter || document.activeElement;
 
-        closeModal();
-        progressModal.classList.remove('hidden');
-
-        // --- Simulate Staged Process for User Feedback ---
-        const steps = [
-            { msg: "Uploading file..." },
-            { msg: "Validating watchlist file..." },
-            { msg: "Syncing metadata cache..." },
-            { msg: "Updating suggestions..." },
-            { msg: "Finalizing import..." }
-        ];
-
-        function runImportSteps(stepIndex) {
-            if (stepIndex >= steps.length) {
-                // When simulation is done, submit the form for real.
-                // The backend will take over and the page will reload upon completion.
-                importForm.submit();
+        // Handle the import form to show the progress modal
+        if (form.id === 'import-form') {
+            e.preventDefault();
+            const fileInput = document.getElementById('watchlist_file');
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert("Please select a file to import.");
                 return;
             }
-
-            const step = steps[stepIndex];
-            progressMessage.textContent = step.msg;
-
-            setTimeout(() => {
-                runImportSteps(stepIndex + 1);
-            }, 1000); // Wait 1s between messages
+            importModal.classList.add('hidden');
+            progressModal.classList.remove('hidden');
+            // Simulate a delay for UX before actual submission
+            setTimeout(() => form.submit(), 1000);
+            return; // Stop further processing
         }
-        runImportSteps(0); // Start the simulation
+
+        // Handle all other forms that have a `data-confirm` attribute
+        if (submitter && submitter.dataset.confirm) {
+            e.preventDefault(); // Prevent submission
+            confirmationModal.show({ // confirmationModal is global from base.html
+                message: submitter.dataset.confirm,
+                confirmText: submitter.dataset.confirmBtnText || 'Confirm',
+                btnClass: submitter.dataset.confirmBtnClass || 'btn-danger',
+                onConfirm: () => {
+                    form.submit(); // Submit after confirmation
+                }
+            });
+        }
+    });
+
+    // Handle Escape key to close the import modal
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (importModal && !importModal.classList.contains('hidden')) {
+                importModal.classList.add('hidden');
+            }
+        }
     });
 });
 </script>
