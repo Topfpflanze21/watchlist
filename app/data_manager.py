@@ -9,7 +9,7 @@ from werkzeug.security import generate_password_hash
 # --- Path Helpers ---
 def get_user_data_path(filename):
     """Returns the full path to a data file for the current logged-in user."""
-    if not current_user.is_authenticated:
+    if not current_user or not current_user.is_authenticated:
         return None
     user_dir = os.path.join('data', 'user_data', str(current_user.id))
     os.makedirs(user_dir, exist_ok=True)

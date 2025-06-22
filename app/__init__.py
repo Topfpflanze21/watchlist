@@ -12,7 +12,6 @@ def create_app(config_class=Config):
     """Creates and configures the Flask application."""
     app = Flask(__name__)
     app.config.from_object(config_class)
-    app.config.setdefault('SUGGESTIONS_CACHE_FILE', 'data/suggestions_cache.json')
 
     # Initialize the login manager with the app
     login_manager.init_app(app)

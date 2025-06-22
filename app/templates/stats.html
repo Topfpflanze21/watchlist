@@ -22,13 +22,13 @@
             <div class="flex items-center">
                 <div class="w-28 text-right mr-4 font-semibold">{{ day }}</div>
                 <div class="flex-1 bg-gray-700 rounded-full h-6 flex items-center">
-                    {% set width_percent = (data.count / stats.max_daily_count * 100)|round|int if stats.max_daily_count > 0 else 0 %}
+                    {% set width_percent = (data['count'] / stats.max_daily_count * 100)|round|int if stats.max_daily_count > 0 else 0 %}
                     {% if width_percent < 25 %}
                         <div class="bg-green-500 h-full rounded-full" style="width: {{ width_percent }}%;"></div>
-                        {% if data.count > 0 %}<span class="ml-2 text-white font-bold text-sm">{{ data.count }} items</span>{% endif %}
+                        {% if data['count'] > 0 %}<span class="ml-2 text-white font-bold text-sm">{{ data['count'] }} items</span>{% endif %}
                     {% else %}
                         <div class="bg-green-500 h-full rounded-full flex items-center justify-end pr-2" style="width: {{ width_percent }}%;">
-                            <span class="text-black font-bold text-sm">{{ data.count }} items</span>
+                            <span class="text-black font-bold text-sm">{{ data['count'] }} items</span>
                         </div>
                     {% endif %}
                 </div>
@@ -42,14 +42,14 @@
     <div class="space-y-8">
         <div class="card p-6 rounded-lg text-center">
             <h3 class="text-2xl font-bold mb-2">Most Active Month</h3>
-            <p class="text-5xl font-bold text-white">{{ stats.most_active_month.month }}</p>
-            <p class="text-lg text-gray-400">with {{ stats.most_active_month.count }} items watched</p>
+            <p class="text-5xl font-bold text-white">{{ stats.most_active_month['month'] }}</p>
+            <p class="text-lg text-gray-400">with {{ stats.most_active_month['count'] }} items watched</p>
         </div>
         <div class="card p-6 rounded-lg text-center">
             <h3 class="text-2xl font-bold mb-2">Time Breakdown</h3>
             <div class="w-full bg-gray-700 rounded-full flex h-8 my-4 text-white font-bold text-lg">
-                <div class="bg-blue-500 rounded-l-full flex items-center justify-center" style="width: {{ stats.time_breakdown.movies }}%">{% if stats.time_breakdown.movies > 10 %}{{ stats.time_breakdown.movies }}%{% endif %}</div>
-                <div class="bg-purple-500 rounded-r-full flex items-center justify-center" style="width: {{ stats.time_breakdown.series }}%">{% if stats.time_breakdown.series > 10 %}{{ stats.time_breakdown.series }}%{% endif %}</div>
+                <div class="bg-blue-500 rounded-l-full flex items-center justify-center" style="width: {{ stats.time_breakdown['movies'] }}%">{% if stats.time_breakdown.movies > 10 %}{{ stats.time_breakdown['movies'] }}%{% endif %}</div>
+                <div class="bg-purple-500 rounded-r-full flex items-center justify-center" style="width: {{ stats.time_breakdown['series'] }}%">{% if stats.time_breakdown.series > 10 %}{{ stats.time_breakdown['series'] }}%{% endif %}</div>
             </div>
             <div class="flex justify-around text-sm">
                 <span><span class="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>Movies</span>

@@ -17,5 +17,6 @@ class Config:
     TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/w500"
 
     # Data Files
-    WATCHLIST_FILE = "data/watchlist.json"
-    CACHE_FILE = "data/metadata_cache.json"
+    WATCHLIST_FILE = "watchlist.json"
+    CACHE_FILE = "metadata_cache.json"
+    SUGGESTIONS_CACHE_FILE = "suggestions_cache.json"

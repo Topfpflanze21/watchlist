@@ -1,14 +1,168 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-4xl mx-auto">
-    <h1 class="text-4xl font-bold mb-8 text-center">Profile</h1>
-    <div class="card p-6 md:p-8 text-center">
-        <h2 class="text-2xl font-bold text-white mb-4">Welcome, {{ username }}!</h2>
-        <div class="flex justify-center gap-4 mt-6">
-            <a href="{{ url_for('main.settings') }}" class="btn btn-primary">Settings</a>
-            <a href="{{ url_for('main.stats') }}" class="btn btn-secondary">View Statistics</a>
-            <a href="{{ url_for('main.export_watchlist') }}" class="btn !bg-green-600 hover:!bg-green-500">Export Watchlist</a>
+    <div class="flex flex-col sm:flex-row items-center gap-6 mb-12 text-center sm:text-left">
+        <div class="flex-shrink-0 w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-4xl font-extrabold text-white shadow-lg ring-4 ring-gray-700">
+            {{ username[0]|upper }}
+        </div>
+        <div>
+            <p class="text-lg text-gray-400">Welcome back,</p>
+            <h1 class="text-4xl lg:text-5xl font-extrabold text-white">{{ username }}</h1>
         </div>
     </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <a href="{{ url_for('main.settings') }}" class="card p-6 rounded-xl transform hover:-translate-y-1 transition-transform duration-300 shadow-lg hover:shadow-2xl hover:border-blue-500 flex items-center gap-6">
+            <div class="bg-blue-600/20 p-4 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.06-.94l2.03-1.58a.5.5 0 0 0 .11-.63l-1.84-3.18a.5.5 0 0 0-.61-.22l-2.39 1.02a7.34 7.34 0 0 0-1.6-.94l-.38-2.65A.5.5 0 0 0 14.25 2h-4.5a.5.5 0 0 0-.49.43l-.38 2.65a7.34 7.34 0 0 0-1.6.94L4.88 4.78a.5.5 0 0 0-.61.22L2.43 8.18a.5.5 0 0 0 .11.63l2.03 1.58c-.04.3-.06.61-.06.94s.02.64.06.94l-2.03 1.58a.5.5 0 0 0-.11.63l1.84 3.18a.5.5 0 0 0 .61.22l2.39-1.02a7.34 7.34 0 0 0 1.6.94l.38 2.65a.5.5 0 0 0 .49.43h4.5a.5.5 0 0 0 .49-.43l.38-2.65a7.34 7.34 0 0 0 1.6-.94l2.39 1.02a.5.5 0 0 0 .61-.22l1.84-3.18a.5.5 0 0 0-.11-.63l-2.03-1.58z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-white">Account Settings</h2>
+                <p class="text-gray-400">Update your profile and preferences.</p>
+            </div>
+        </a>
+
+        <a href="{{ url_for('main.stats') }}" class="card p-6 rounded-xl transform hover:-translate-y-1 transition-transform duration-300 shadow-lg hover:shadow-2xl hover:border-purple-500 flex items-center gap-6">
+            <div class="bg-purple-600/20 p-4 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-400"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20V16"></path></svg>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-white">View Statistics</h2>
+                <p class="text-gray-400">Analyze your watching habits.</p>
+            </div>
+        </a>
+
+        <a href="{{ url_for('main.export_watchlist') }}" class="card p-6 rounded-xl transform hover:-translate-y-1 transition-transform duration-300 shadow-lg hover:shadow-2xl hover:border-green-500 flex items-center gap-6">
+            <div class="bg-green-600/20 p-4 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-white">Export Watchlist</h2>
+                <p class="text-gray-400">Download your data as a JSON file.</p>
+            </div>
+        </a>
+
+        <button id="open-import-modal-btn" class="card p-6 rounded-xl transform hover:-translate-y-1 transition-transform duration-300 shadow-lg hover:shadow-2xl hover:border-red-500 flex items-center gap-6 text-left w-full">
+            <div class="bg-red-600/20 p-4 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-white">Import Watchlist</h2>
+                <p class="text-gray-400">Overwrite watchlist from a JSON file.</p>
+            </div>
+        </button>
+    </div>
 </div>
+
+<div id="import-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[999] hidden p-4">
+    <div class="card p-8 rounded-lg shadow-2xl relative w-full max-w-md">
+         <button id="close-import-modal-btn" class="absolute top-2 right-3 text-gray-400 hover:text-white text-3xl leading-none font-bold transition-colors" aria-label="Close">&times;</button>
+         <div class="text-center">
+            <h3 class="text-2xl font-bold mb-2 text-white">Import Watchlist</h3>
+            <p class="text-gray-400 mb-6 text-sm">Select a watchlist JSON file to import. This action will overwrite your current watchlist.</p>
+         </div>
+         <form id="import-form" method="POST" action="{{ url_for('main.import_watchlist') }}" enctype="multipart/form-data">
+            <div class="mb-6">
+                <label for="watchlist_file" class="sr-only">Select file</label>
+                <input type="file" name="watchlist_file" id="watchlist_file" accept=".json" required class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-600 file:text-white hover:file:bg-gray-500 cursor-pointer">
+            </div>
+            <button type="submit" class="btn btn-danger w-full">Import & Overwrite</button>
+        </form>
+    </div>
+</div>
+
+<div id="progress-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[999] hidden p-4">
+    <div class="card p-8 rounded-lg shadow-2xl relative w-full max-w-md text-center">
+         <h3 class="text-2xl font-bold mb-4 text-white">Import in Progress</h3>
+         <svg class="animate-spin h-12 w-12 text-blue-500 mx-auto my-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+         </svg>
+         <p id="progress-message" class="text-gray-400 mt-4 h-5">Starting import...</p>
+    </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Modal Handling for File Selection ---
+    const openBtn = document.getElementById('open-import-modal-btn');
+    const closeBtn = document.getElementById('close-import-modal-btn');
+    const importModal = document.getElementById('import-modal');
+
+    if (openBtn && importModal) {
+        openBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            importModal.classList.remove('hidden');
+        });
+    }
+
+    const closeModal = () => {
+        if (importModal) {
+            importModal.classList.add('hidden');
+        }
+    };
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+
+    if (importModal) {
+        importModal.addEventListener('click', (e) => {
+            if (e.target === importModal) {
+                closeModal();
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !importModal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
+    }
+
+    // --- Loading Animation and Form Submission ---
+    const importForm = document.getElementById('import-form');
+    const progressModal = document.getElementById('progress-modal');
+    const progressMessage = document.getElementById('progress-message');
+    const fileInput = document.getElementById('watchlist_file');
+
+    importForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert("Please select a file to import.");
+            return;
+        }
+
+        closeModal();
+        progressModal.classList.remove('hidden');
+
+        // --- Simulate Staged Process for User Feedback ---
+        const steps = [
+            { msg: "Uploading file..." },
+            { msg: "Validating watchlist file..." },
+            { msg: "Syncing metadata cache..." },
+            { msg: "Updating suggestions..." },
+            { msg: "Finalizing import..." }
+        ];
+
+        function runImportSteps(stepIndex) {
+            if (stepIndex >= steps.length) {
+                // When simulation is done, submit the form for real.
+                // The backend will take over and the page will reload upon completion.
+                importForm.submit();
+                return;
+            }
+
+            const step = steps[stepIndex];
+            progressMessage.textContent = step.msg;
+
+            setTimeout(() => {
+                runImportSteps(stepIndex + 1);
+            }, 1000); // Wait 1s between messages
+        }
+        runImportSteps(0); // Start the simulation
+    });
+});
+</script>
 {% endblock %}

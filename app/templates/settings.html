@@ -1,48 +1,161 @@
+{# /app/templates/settings.html #}
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-4xl mx-auto">
     <h1 class="text-4xl font-bold mb-8 text-center">Settings</h1>
 
     <div class="card p-6 md:p-8">
-        <form method="POST">
-            <h2 class="text-2xl font-bold text-white border-b-2 border-gray-700 pb-2 mb-6">Account Information</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label for="username" class="block text-sm font-medium text-gray-300 mb-1">Username</label>
-                    <input type="text" name="username" id="username" value="{{ current_user.username }}" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 text-white focus:ring-blue-500 focus:border-blue-500" required>
-                </div>
-                <div></div>
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-300 mb-1">New Password</label>
-                    <input type="password" name="password" id="password" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 text-white focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="password_confirm" class="block text-sm font-medium text-gray-300 mb-1">Confirm New Password</label>
-                    <input type="password" name="password_confirm" id="password_confirm" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 text-white focus:ring-blue-500 focus:border-blue-500">
-                </div>
-            </div>
+        <form method="POST" action="{{ url_for('main.settings') }}">
+            <fieldset>
+                <legend class="text-2xl font-bold text-white border-b-2 border-gray-700 pb-3 mb-6 w-full">Account Information</legend>
+                <div class="space-y-6">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                        <input type="text" name="username" id="username" value="{{ current_user.username }}" class="w-full max-w-sm bg-gray-700 border-gray-600 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
 
-            <h2 class="text-2xl font-bold text-white border-b-2 border-gray-700 pb-2 mb-6 mt-10">My Watch Providers</h2>
-            <p class="text-gray-400 mb-6">Select the streaming services you subscribe to. This will be used in the future to help tailor suggestions for you. (Region: AT)</p>
+                    <div class="space-y-4 pt-4 border-t border-gray-700/50">
+                        <h3 class="text-lg font-semibold text-gray-200">Change Password</h3>
+                        <p class="text-sm text-gray-400 max-w-xl">To change your password, enter your current password below, followed by a new password. Leave these fields blank to keep your current password.</p>
+                        <div class="space-y-4 max-w-sm mt-4">
+                             <div>
+                                <label for="current_password" class="block text-sm font-medium text-gray-300 mb-2">Current Password</label>
+                                <input type="password" name="current_password" id="current_password" placeholder="••••••••" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="password" class="block text-sm font-medium text-gray-300 mb-2">New Password</label>
+                                <input type="password" name="password" id="password" placeholder="Enter new password" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="password_confirm" class="block text-sm font-medium text-gray-300 mb-2">Confirm New Password</label>
+                                <input type="password" name="password_confirm" id="password_confirm" placeholder="Confirm new password" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
 
-            {% if providers %}
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {% for provider in providers %}
-                <label for="provider-{{ provider.id }}" class="flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer {% if provider.id in saved_provider_ids %} bg-blue-900/50 border-2 border-blue-500 {% else %} bg-gray-700/50 border-2 border-transparent hover:border-gray-500 {% endif %}">
-                    <input type="checkbox" name="provider_ids" value="{{ provider.id }}" id="provider-{{ provider.id }}" class="hidden" {% if provider.id in saved_provider_ids %}checked{% endif %} onchange="this.parentElement.classList.toggle('bg-blue-900/50', this.checked); this.parentElement.classList.toggle('border-blue-500', this.checked); this.parentElement.classList.toggle('bg-gray-700/50', !this.checked); this.parentElement.classList.toggle('border-transparent', !this.checked);">
-                    <img src="{{ provider.logo_url }}" alt="{{ provider.name }}" class="w-16 h-16 rounded-md object-cover mb-2">
-                    <span class="text-center text-sm font-medium">{{ provider.name }}</span>
-                </label>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-gray-400">Could not load available watch providers. Please ensure your TMDB API key is correct.</p>
-            {% endif %}
+            <fieldset class="mt-10">
+                 <legend class="text-2xl font-bold text-white border-b-2 border-gray-700 pb-3 mb-6 w-full">My Watch Providers</legend>
+                 <div class="flex flex-wrap items-center justify-between gap-4">
+                     <div>
+                        <p class="text-gray-300">You have <strong id="provider-count" class="text-white">{{ saved_provider_ids|length }}</strong> provider(s) selected.</p>
+                        <p class="text-gray-400 text-sm mt-1">This will be used in the future to help tailor suggestions. (Region: AT)</p>
+                     </div>
+                     <button type="button" id="open-providers-modal" class="btn btn-secondary">Manage Providers</button>
+                 </div>
+                 <div class="hidden">
+                    {% if providers %}
+                        {% for provider in providers %}
+                        <input type="checkbox" name="provider_ids" value="{{ provider.id }}" id="provider-{{ provider.id }}" class="provider-checkbox-input" {% if provider.id in saved_provider_ids %}checked{% endif %}>
+                        {% endfor %}
+                    {% endif %}
+                 </div>
+            </fieldset>
 
-            <div class="mt-8 text-right">
-                <button type="submit" class="btn btn-secondary">Save Changes</button>
+            <div class="mt-10 pt-6 border-t border-gray-700 text-right">
+                <button type="submit" class="btn !px-8 !py-3">Save All Changes</button>
             </div>
         </form>
     </div>
 </div>
+
+<div id="providers-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[999] hidden p-4">
+    <div class="card w-full max-w-4xl h-[90vh] flex flex-col">
+        <div class="p-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0 gap-4">
+            <div>
+                <h2 class="text-xl font-bold">Select Watch Providers</h2>
+                <p class="text-sm text-gray-400">Region: AT</p>
+            </div>
+            <div class="flex-grow flex justify-center">
+                <input type="text" id="provider-search" placeholder="Search providers..." class="w-full max-w-sm bg-gray-800 border border-gray-600 rounded-lg py-2 px-4 text-white focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <button id="close-providers-modal" class="text-gray-400 hover:text-white text-3xl leading-none">&times;</button>
+        </div>
+
+        <div class="p-4 overflow-y-auto flex-grow details-scroll">
+            {% if providers %}
+            <div id="provider-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {% for provider in providers %}
+                <label for="provider-{{ provider.id }}"
+                       class="provider-label flex flex-col items-center p-3 rounded-lg transition-colors cursor-pointer {% if provider.id in saved_provider_ids %} bg-blue-900/50 border-2 border-blue-500 {% else %} bg-gray-700/50 border-2 border-transparent hover:border-gray-500 {% endif %}"
+                       data-provider-name="{{ provider.name|lower }}">
+                    <img src="{{ provider.logo_url }}" alt="{{ provider.name }}" class="w-16 h-16 rounded-md object-cover mb-2 pointer-events-none">
+                    <span class="text-center text-sm font-medium pointer-events-none">{{ provider.name }}</span>
+                </label>
+                {% endfor %}
+            </div>
+             <p id="no-providers-found" class="text-gray-400 text-center py-8 hidden">No providers found matching your search.</p>
+            {% else %}
+            <p class="text-gray-400">Could not load available watch providers. Please ensure your TMDB API key is correct.</p>
+            {% endif %}
+        </div>
+         <div class="p-4 border-t border-gray-700 flex-shrink-0 text-right">
+            <button id="done-providers-modal" class="btn">Done</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- Modal Handling ---
+    const openBtn = document.getElementById('open-providers-modal');
+    const modal = document.getElementById('providers-modal');
+    if (!modal) return;
+
+    const closeBtn = document.getElementById('close-providers-modal');
+    const doneBtn = document.getElementById('done-providers-modal');
+    const searchInput = document.getElementById('provider-search');
+    const providerCountSpan = document.getElementById('provider-count');
+    const noResultsMsg = document.getElementById('no-providers-found');
+    const providerLabels = Array.from(document.querySelectorAll('.provider-label'));
+    const realCheckboxes = Array.from(document.querySelectorAll('.provider-checkbox-input'));
+
+    const closeModal = () => modal.classList.add('hidden');
+    const openModal = () => modal.classList.remove('hidden');
+
+    openBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    doneBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+     document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+    });
+
+    // --- Provider Selection and Styling ---
+    const updateProviderCount = () => {
+        const count = document.querySelectorAll('.provider-checkbox-input:checked').length;
+        providerCountSpan.textContent = count;
+    };
+
+    realCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const label = document.querySelector(`label[for="${checkbox.id}"]`);
+            if (!label) return;
+            const isChecked = checkbox.checked;
+
+            label.classList.toggle('bg-blue-900/50', isChecked);
+            label.classList.toggle('border-blue-500', isChecked);
+            label.classList.toggle('bg-gray-700/50', !isChecked);
+            label.classList.toggle('border-transparent', !isChecked);
+            updateProviderCount();
+        });
+    });
+
+    // --- Search Functionality ---
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase().trim();
+        let visibleCount = 0;
+        providerLabels.forEach(label => {
+            const name = label.dataset.providerName;
+            const isVisible = name.includes(query);
+            label.classList.toggle('hidden', !isVisible);
+            if (isVisible) visibleCount++;
+        });
+        noResultsMsg.classList.toggle('hidden', visibleCount > 0);
+    });
+});
+</script>
 {% endblock %}

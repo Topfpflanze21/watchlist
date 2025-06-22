@@ -13,7 +13,7 @@ if __name__ == '__main__':
         utils.run_initial_setup()
 
     # Pass the app instance to the background thread's arguments
-    # threading.Thread(target=utils.sync_cache_with_watchlist, args=(app,), daemon=True).start()
+    threading.Thread(target=utils.sync_cache_with_watchlist, args=(app,), daemon=True).start()
 
     threading.Timer(1.25, lambda: webbrowser.open(url)).start()
     app.run(port=5000, debug=False)
