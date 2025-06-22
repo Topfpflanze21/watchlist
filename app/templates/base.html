@@ -87,6 +87,7 @@
                  </div>
             </div>
             <div class="flex items-center gap-4">
+                {% if current_user.is_authenticated %}
                 <div class="w-full max-w-xs">
                     <form action="{{ url_for('main.search') }}" method="post" class="relative">
                         <input type="search" name="query" placeholder="Search to add movies & series..." class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:ring-blue-500 focus:border-blue-500" required>
@@ -98,6 +99,13 @@
                 <a href="{{ url_for('main.profile') }}" class="nav-link {% if request.path == url_for('main.profile') %}active{% endif %}" title="Profile Settings">
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </a>
+                 <a href="{{ url_for('main.logout') }}" class="nav-link" title="Logout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </a>
+                {% else %}
+                 <a href="{{ url_for('main.login') }}" class="nav-link text-lg px-3">Login</a>
+                 <a href="{{ url_for('main.register') }}" class="btn !py-2 !px-4">Register</a>
+                {% endif %}
             </div>
         </div>
     </nav>

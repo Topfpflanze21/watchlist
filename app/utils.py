@@ -25,7 +25,6 @@ def run_initial_setup():
     api_key = current_app.config['TMDB_API_KEY']
     if not api_key or api_key == "YOUR_API_KEY_HERE":
         print("\n" + "=" * 50 + "\nWARNING: TMDB_API_KEY is not set in config.py!\n" + "=" * 50 + "\n")
-    data_manager.load_watchlist()
     print("Initial setup complete.")
 
 def sync_cache_with_watchlist(app):

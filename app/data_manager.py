@@ -3,11 +3,25 @@ import os
 import json
 import uuid
 from flask import current_app
+from flask_login import current_user
 
+# --- Path Helpers ---
+def get_user_data_path(filename):
+    """Returns the full path to a data file for the current logged-in user."""
+    if not current_user.is_authenticated:
+        return None
+    user_dir = os.path.join('data', 'user_data', str(current_user.id))
+    os.makedirs(user_dir, exist_ok=True)
+    return os.path.join(user_dir, filename)
 
+def get_base_data_path(filename):
+    """Returns the path to a file in the root data directory."""
+    return os.path.join('data', filename)
+
+# --- Generic JSON Load/Save ---
 def load_json_file(filename, default_data):
     """Loads a JSON file, returning default data if it doesn't exist or is empty/invalid."""
-    if not os.path.exists(filename):
+    if not filename or not os.path.exists(filename):
         return default_data
     try:
         with open(filename, "r", encoding='utf-8') as f:
@@ -16,100 +30,66 @@ def load_json_file(filename, default_data):
     except (IOError, json.JSONDecodeError):
         return default_data
 
-
 def save_json_file(filename, data):
     """Saves data to a JSON file with pretty printing."""
-    # Ensure the directory exists before writing the file
+    if not filename: return
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, "w", encoding='utf-8') as f:
         json.dump(data, f, indent=4)
 
+# --- User Management ---
+def get_users_db():
+    """Loads the user database."""
+    return load_json_file(get_base_data_path('users.json'), {"users": [], "next_id": 1})
 
-def migrate_watchlist_add_uuids_to_movies(watchlist):
-    """Adds unique IDs to legacy movie watch records for easier identification."""
-    made_changes = False
-    if 'movies' in watchlist.get('watched', {}) and isinstance(watchlist['watched']['movies'], list):
-        for record in watchlist['watched']['movies']:
-            if 'watch_id' not in record:
-                record['watch_id'] = str(uuid.uuid4())
-                made_changes = True
-    return made_changes
+def save_users_db(db):
+    """Saves the user database."""
+    save_json_file(get_base_data_path('users.json'), db)
 
+def find_user_by_username(username):
+    """Finds a user by their username."""
+    db = get_users_db()
+    return next((user for user in db['users'] if user['username'].lower() == username.lower()), None)
 
-def migrate_series_to_multi_watch(watchlist):
-    """Migrates series data to support multiple watch-throughs."""
-    made_changes = False
-    watched_series = watchlist.get('watched', {}).get('series', {})
-    for series_id, data in watched_series.items():
-        if isinstance(data, dict):  # Old format: series_id -> {details}
-            print(f"Migrating series {series_id} to multi-watch format.")
-            new_watch_record = {"series_watch_id": str(uuid.uuid4()), "watched_episodes": data.get("watched_episodes", {})}
-            if 'rating' in data:
-                new_watch_record['rating'] = data['rating']
-            watched_series[series_id] = [new_watch_record]  # New format: series_id -> [list of watches]
-            made_changes = True
-    return made_changes
+def find_user_by_id(user_id):
+    """Finds a user by their ID."""
+    db = get_users_db()
+    return next((user for user in db['users'] if str(user['id']) == str(user_id)), None)
 
-
+# --- Watchlist, Cache, and Suggestions (Now User-Specific) ---
 def load_watchlist():
-    """Loads the main watchlist data, performing data migrations if necessary."""
-    watchlist_file = current_app.config['WATCHLIST_FILE']
+    """Loads the current user's watchlist."""
+    watchlist_file = get_user_data_path(current_app.config['WATCHLIST_FILE'])
+    # Default structure for a new user's watchlist
     default = {"watched": {"movies": [], "series": {}}, "planned": {"movies": [], "series": []}, "user_preferences": {"providers": []}}
-    watchlist = load_json_file(watchlist_file, default)
-
-    # Run migrations for older data formats
-    if migrate_watchlist_add_uuids_to_movies(watchlist):
-        print("Migrating movie watchlist: Added unique IDs.")
-        save_json_file(watchlist_file, watchlist)
-
-    if migrate_series_to_multi_watch(watchlist):
-        print("Migrating series data to new multi-watch format.")
-        save_json_file(watchlist_file, watchlist)
-
-    if 'series' not in watchlist.get('watched', {}) or isinstance(watchlist['watched']['series'], list):
-        print("Migrating series data to new episode-tracking format.")
-        watchlist['watched']['series'] = {}  # Replace old list with new dict format
-        save_json_file(watchlist_file, watchlist)
-        print("Series data migration complete.")
-
-    if 'user_preferences' not in watchlist:
-        watchlist['user_preferences'] = {"providers": []}
-        save_json_file(watchlist_file, watchlist)
-
-    return watchlist
-
+    return load_json_file(watchlist_file, default)
 
 def save_watchlist(data):
-    """Saves the main watchlist data."""
-    save_json_file(current_app.config['WATCHLIST_FILE'], data)
-
+    """Saves the current user's watchlist."""
+    save_json_file(get_user_data_path(current_app.config['WATCHLIST_FILE']), data)
 
 def load_cache():
-    """Loads the metadata cache."""
-    return load_json_file(current_app.config['CACHE_FILE'], {"movies": {}, "series": {}, "providers_cache": {}, "collections": {}})
-
+    """Loads the current user's metadata cache."""
+    return load_json_file(get_user_data_path(current_app.config['CACHE_FILE']), {"movies": {}, "series": {}, "providers_cache": {}, "collections": {}})
 
 def save_cache(data):
-    """Saves the metadata cache."""
-    save_json_file(current_app.config['CACHE_FILE'], data)
-
+    """Saves the current user's metadata cache."""
+    save_json_file(get_user_data_path(current_app.config['CACHE_FILE']), data)
 
 def load_suggestions_cache():
-    """Loads the suggestions cache."""
-    return load_json_file(current_app.config['SUGGESTIONS_CACHE_FILE'], {})
-
+    """Loads the current user's suggestions cache."""
+    return load_json_file(get_user_data_path(current_app.config['SUGGESTIONS_CACHE_FILE']), {})
 
 def save_suggestions_cache(data):
-    """Saves the suggestions cache."""
-    save_json_file(current_app.config['SUGGESTIONS_CACHE_FILE'], data)
-
+    """Saves the current user's suggestions cache."""
+    save_json_file(get_user_data_path(current_app.config['SUGGESTIONS_CACHE_FILE']), data)
 
 def clear_suggestions_cache():
-    """Deletes the suggestions cache file to invalidate it."""
-    cache_file = current_app.config.get('SUGGESTIONS_CACHE_FILE')
+    """Deletes the current user's suggestions cache file."""
+    cache_file = get_user_data_path(current_app.config.get('SUGGESTIONS_CACHE_FILE'))
     if cache_file and os.path.exists(cache_file):
         try:
             os.remove(cache_file)
-            print("Suggestions cache cleared.")
+            print(f"Suggestions cache cleared for user {current_user.id}.")
         except OSError as e:
             print(f"Error clearing suggestions cache: {e}")

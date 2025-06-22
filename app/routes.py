@@ -7,9 +7,59 @@ from datetime import datetime
 from collections import Counter, defaultdict
 from flask import (Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify)
 from . import data_manager, tmdb_api, utils
+from flask_login import login_user, logout_user, current_user, login_required
+from .models import User
 
 bp = Blueprint('main', __name__)
 
+# --- Authentication Routes ---
+@bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        remember = request.form.get('remember') is not None
+        user_data = data_manager.find_user_by_username(username)
+        user_obj = User(user_data['id'], user_data['username'], user_data['password_hash']) if user_data else None
+
+        if user_obj is None or not user_obj.check_password(password):
+            flash('Invalid username or password.', 'error')
+            return redirect(url_for('main.login'))
+
+        login_user(user_obj, remember=remember)
+        return redirect(url_for('main.index'))
+    return render_template('login.html')
+
+@bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if data_manager.find_user_by_username(username):
+            flash('Username already exists. Please choose another.', 'error')
+            return redirect(url_for('main.register'))
+
+        users_db = data_manager.get_users_db()
+        new_user = User(id=users_db['next_id'], username=username, password_hash='')
+        new_user.set_password(password)
+
+        users_db['users'].append({'id': new_user.id, 'username': new_user.username, 'password_hash': new_user.password_hash})
+        users_db['next_id'] += 1
+        data_manager.save_users_db(users_db)
+
+        flash('Registration successful! Please log in.', 'success')
+        return redirect(url_for('main.login'))
+    return render_template('register.html')
+
+
+@bp.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('main.index'))
 
 @bp.route('/refresh_suggestions')
 def refresh_suggestions():
