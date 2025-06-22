@@ -4,6 +4,7 @@ import json
 import uuid
 from flask import current_app
 from flask_login import current_user
+from werkzeug.security import generate_password_hash
 
 # --- Path Helpers ---
 def get_user_data_path(filename):
@@ -55,6 +56,22 @@ def find_user_by_id(user_id):
     """Finds a user by their ID."""
     db = get_users_db()
     return next((user for user in db['users'] if str(user['id']) == str(user_id)), None)
+
+def update_user(user_id, new_username=None, new_password=None):
+    """Updates a user's username and/or password."""
+    db = get_users_db()
+    user_found = False
+    for user in db['users']:
+        if str(user['id']) == str(user_id):
+            if new_username:
+                user['username'] = new_username
+            if new_password:
+                user['password_hash'] = generate_password_hash(new_password)
+            user_found = True
+            break
+    if user_found:
+        save_users_db(db)
+    return user_found
 
 # --- Watchlist, Cache, and Suggestions (Now User-Specific) ---
 def load_watchlist():

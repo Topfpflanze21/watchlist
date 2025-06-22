@@ -85,7 +85,6 @@
                     <a href="{{ url_for('main.movies') }}" class="nav-link text-lg px-3 {% if request.path == url_for('main.movies') %}active{% endif %}">Movies</a>
                     <a href="{{ url_for('main.series') }}" class="nav-link text-lg px-3 {% if request.path == url_for('main.series') %}active{% endif %}">Series</a>
                     <a href="{{ url_for('main.collections') }}" class="nav-link text-lg px-3 {% if 'collection' in request.path %}active{% endif %}">Collections</a>
-                    <a href="{{ url_for('main.stats') }}" class="nav-link text-lg px-3 {% if request.path == url_for('main.stats') %}active{% endif %}">Statistics</a>
                  </div>
             </div>
             <div class="flex items-center gap-4">

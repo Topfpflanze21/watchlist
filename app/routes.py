@@ -5,10 +5,11 @@ import requests
 import calendar
 from datetime import datetime
 from collections import Counter, defaultdict
-from flask import (Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify)
+from flask import (Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, Response)
 from . import data_manager, tmdb_api, utils
 from flask_login import login_user, logout_user, current_user, login_required
 from .models import User
+import json
 
 bp = Blueprint('main', __name__)
 
@@ -549,17 +550,57 @@ def stats():
     return render_template('stats.html', stats=stats_data)
 
 
-@bp.route('/profile', methods=['GET', 'POST'])
+@bp.route('/profile')
 @login_required
 def profile():
+    return render_template('profile.html', username=current_user.username)
+
+
+@bp.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
     watchlist = data_manager.load_watchlist()
     if request.method == 'POST':
+        # Provider preferences
         provider_ids = [int(pid) for pid in request.form.getlist('provider_ids')]
         watchlist['user_preferences']['providers'] = provider_ids
         data_manager.save_watchlist(watchlist)
+
+        # User account settings
+        new_username = request.form.get('username')
+        new_password = request.form.get('password')
+        password_confirm = request.form.get('password_confirm')
+
+        if new_username and new_username != current_user.username:
+            if data_manager.find_user_by_username(new_username):
+                flash('Username already exists.', 'error')
+                return redirect(url_for('main.settings'))
+            data_manager.update_user(current_user.id, new_username=new_username)
+            flash('Username updated successfully!', 'success')
+
+        if new_password:
+            if new_password != password_confirm:
+                flash('Passwords do not match.', 'error')
+                return redirect(url_for('main.settings'))
+            data_manager.update_user(current_user.id, new_password=new_password)
+            flash('Password updated successfully!', 'success')
+
         data_manager.clear_suggestions_cache()  # Clear cache on preference change
-        flash('Your provider preferences have been saved!', 'success')
-        return redirect(url_for('main.profile'))
+        flash('Your settings have been saved!', 'success')
+        return redirect(url_for('main.settings'))
+
     providers = tmdb_api.get_available_providers(region='AT')
     saved_provider_ids = set(watchlist.get('user_preferences', {}).get('providers', []))
-    return render_template('profile.html', providers=providers, saved_provider_ids=saved_provider_ids)
+    return render_template('settings.html', providers=providers, saved_provider_ids=saved_provider_ids)
+
+
+@bp.route('/export_watchlist')
+@login_required
+def export_watchlist():
+    """Exports the user's watchlist to a JSON file."""
+    watchlist = data_manager.load_watchlist()
+    return Response(
+        json.dumps(watchlist, indent=4),
+        mimetype='application/json',
+        headers={'Content-Disposition': 'attachment;filename=watchlist.json'}
+    )
