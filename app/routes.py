@@ -62,6 +62,7 @@ def logout():
     return redirect(url_for('main.index'))
 
 @bp.route('/refresh_suggestions')
+@login_required
 def refresh_suggestions():
     """Clears the suggestions cache and redirects to the homepage."""
     data_manager.clear_suggestions_cache()
@@ -80,6 +81,8 @@ def index():
         continue_series_suggestions = cached_data.get('continue_series_suggestions', [])
         smart_movie_suggestions = cached_data.get('smart_movie_suggestions', [])
         smart_series_suggestions = cached_data.get('smart_series_suggestions', [])
+        trending_movies = cached_data.get('trending_movies', [])
+        trending_series = cached_data.get('trending_series', [])
     else:
         print("Generating and caching new homepage suggestions...")
         watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
@@ -106,12 +109,32 @@ def index():
         smart_movie_suggestions = utils.get_smart_suggestions('movies')[:26]
         smart_series_suggestions = utils.get_smart_suggestions('series')[:26]
 
+        trending_movies, trending_series = [], []
+        api_key = current_app.config['TMDB_API_KEY']
+        if api_key and api_key != "YOUR_API_KEY_HERE":
+            try:
+                image_url = current_app.config['TMDB_IMAGE_URL']
+                # Fetch Trending Movies
+                res_movies = requests.get(f"{current_app.config['TMDB_BASE_URL']}/trending/movie/week?api_key={api_key}")
+                res_movies.raise_for_status()
+                for item in res_movies.json().get('results', []):
+                    if item.get('poster_path'):
+                        trending_movies.append({"id": item.get('id'), "title": item.get('title'), "year": item.get('release_date', '')[:4], "poster_url": f"{image_url}{item.get('poster_path')}", "type": "movie"})
+                # Fetch Trending Series
+                res_series = requests.get(f"{current_app.config['TMDB_BASE_URL']}/trending/tv/week?api_key={api_key}")
+                res_series.raise_for_status()
+                for item in res_series.json().get('results', []):
+                    if item.get('poster_path'):
+                        trending_series.append({"id": item.get('id'), "title": item.get('name'), "year": item.get('first_air_date', '')[:4], "poster_url": f"{image_url}{item.get('poster_path')}", "type": "series"})
+            except requests.RequestException as e:
+                print(f"API Error fetching trending items: {e}")
+
         suggestions_cache['home_page'] = {'planned_movie_suggestions': p_movie_suggs, 'planned_series_suggestions': p_series_suggs, 'continue_collection_suggestions': continue_collection_suggestions[:26],
-            'continue_series_suggestions': continue_series_suggestions[:26], 'smart_movie_suggestions': smart_movie_suggestions, 'smart_series_suggestions': smart_series_suggestions}
+            'continue_series_suggestions': continue_series_suggestions[:26], 'smart_movie_suggestions': smart_movie_suggestions, 'smart_series_suggestions': smart_series_suggestions, 'trending_movies': trending_movies[:26], 'trending_series': trending_series[:26]}
         data_manager.save_suggestions_cache(suggestions_cache)
 
     return render_template('index.html', planned_movie_suggestions=p_movie_suggs, planned_series_suggestions=p_series_suggs, continue_collection_suggestions=continue_collection_suggestions, continue_series_suggestions=continue_series_suggestions,
-                           smart_movie_suggestions=smart_movie_suggestions, smart_series_suggestions=smart_series_suggestions)
+                           smart_movie_suggestions=smart_movie_suggestions, smart_series_suggestions=smart_series_suggestions, trending_movies=trending_movies, trending_series=trending_series)
 
 
 @bp.route('/movies')
@@ -183,6 +206,7 @@ def item_detail(item_type, item_id):
 
 
 @bp.route('/item/<item_type>/<int:item_id>/action', methods=['POST'])
+@login_required
 def item_detail_action(item_type, item_id):
     internal, watchlist = ('movies' if item_type == 'movie' else 'series'), data_manager.load_watchlist()
     should_clear_cache = False
@@ -407,6 +431,7 @@ def collections():
 
 
 @bp.route('/stats')
+@login_required
 def stats():
     watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
     w_movies = watchlist['watched']['movies']
@@ -525,6 +550,7 @@ def stats():
 
 
 @bp.route('/profile', methods=['GET', 'POST'])
+@login_required
 def profile():
     watchlist = data_manager.load_watchlist()
     if request.method == 'POST':

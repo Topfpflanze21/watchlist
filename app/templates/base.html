@@ -13,6 +13,8 @@
             font-weight: 600; text-align: center; transition: background-color 0.2s; display: inline-block;
         }
         .btn:hover { background-color: #2563eb; }
+        .btn-primary { background-color: #3b82f6; }
+        .btn-primary:hover { background-color: #2563eb; }
         .btn-secondary { background-color: #4f46e5; }
         .btn-secondary:hover { background-color: #4338ca; }
         .btn-danger { background-color: #dc2626; }
@@ -87,7 +89,6 @@
                  </div>
             </div>
             <div class="flex items-center gap-4">
-                {% if current_user.is_authenticated %}
                 <div class="w-full max-w-xs">
                     <form action="{{ url_for('main.search') }}" method="post" class="relative">
                         <input type="search" name="query" placeholder="Search to add movies & series..." class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:ring-blue-500 focus:border-blue-500" required>
@@ -96,6 +97,7 @@
                         </button>
                     </form>
                 </div>
+                {% if current_user.is_authenticated %}
                 <a href="{{ url_for('main.profile') }}" class="nav-link {% if request.path == url_for('main.profile') %}active{% endif %}" title="Profile Settings">
                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </a>
@@ -188,6 +190,21 @@
             }
         };
         confirmationModal.init();
+
+        document.body.addEventListener('click', (e) => {
+            if (e.target.closest('.login-prompt-btn')) {
+                e.preventDefault();
+                confirmationModal.show({
+                    title: 'Login Required',
+                    message: 'You need to be logged in to use this feature.',
+                    confirmText: 'Login',
+                    btnClass: 'btn-primary',
+                    onConfirm: () => {
+                        window.location.href = "{{ url_for('main.login') }}";
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

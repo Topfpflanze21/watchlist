@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% if current_user.is_authenticated %}
 <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
     <div class="flex-grow">
         <label for="search-input" class="sr-only">Search</label>
@@ -232,4 +233,28 @@ document.addEventListener('DOMContentLoaded', () => {
     filterAndSort();
 });
 </script>
+{% else %}
+<div class="max-w-xl mx-auto text-center card p-10 md:p-12 rounded-2xl">
+    {% if item_type == 'movies' %}
+        {% set icon_bg_color = 'bg-blue-600/20' %}
+        {% set icon_color = 'text-blue-400' %}
+    {% elif item_type == 'series' %}
+        {% set icon_bg_color = 'bg-purple-600/20' %}
+        {% set icon_color = 'text-purple-400' %}
+    {% endif %}
+    <div class="flex justify-center mb-6">
+        <div class="{{ icon_bg_color }} p-4 rounded-full">
+             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="{{ icon_color }}"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </div>
+    </div>
+    <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-3">Login To</h2>
+    <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-3">Access Your {{ item_type|capitalize }}</h2>
+    <p class="text-gray-400 text-lg mb-8">You need to be logged in to view and manage your {{ item_type }}.</p>
+    <div class="flex justify-center items-center gap-x-4">
+        <a href="{{ url_for('main.login') }}" class="btn !px-8 !py-3">Login</a>
+        <span class="text-gray-500">or</span>
+        <a href="{{ url_for('main.register') }}" class="font-semibold text-blue-400 hover:text-blue-300">Create an account</a>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
