@@ -256,7 +256,7 @@ def show_search_results():
             return redirect(url_for('main.index', message=f"API Error: {e}", category="error"))
     watchlist = data_manager.load_watchlist()
     p_m_ids, w_m_ids = {i['id'] for i in watchlist['planned']['movies']}, {i['id'] for i in watchlist['watched']['movies']}
-    p_s_ids, w_s_ids = {int(id) for id in watchlist['planned']['series']}, {int(id) for id in watchlist['watched']['series']}
+    p_s_ids, w_s_ids = {i['id'] for i in watchlist['planned']['series']}, {int(id) for id in watchlist['watched']['series']}
     for item in results:
         is_movie, item_id = (item['type'] == 'movie'), item['id']
         if (is_movie and item_id in w_m_ids) or (not is_movie and item_id in w_s_ids):
