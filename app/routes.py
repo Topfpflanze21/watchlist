@@ -433,9 +433,10 @@ def clear_watchlist():
 @bp.route('/delete_account', methods=['POST'])
 @login_required
 def delete_account():
-    user_to_delete = current_user
+    user_id_to_delete = current_user.id
+    user_username_to_delete = current_user.username
     logout_user()
-    if data_manager.delete_user(user_to_delete.id):
-        return jsonify({'status': 'success', 'message': f'Account "{user_to_delete.username}" has been permanently deleted.', 'redirect': url_for('main.index')})
+    if data_manager.delete_user(user_id_to_delete):
+        return jsonify({'status': 'success', 'message': f'Account "{user_username_to_delete}" has been permanently deleted.', 'redirect': url_for('main.index')})
     else:
         return jsonify({'status': 'error', 'message': 'There was an error deleting your account.'})
