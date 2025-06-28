@@ -4,7 +4,7 @@
 <div class="max-w-md mx-auto mt-12">
     <div class="card p-8">
         <h2 class="text-3xl font-bold text-center text-white mb-6">Login</h2>
-        <form method="POST" action="{{ url_for('main.login') }}" class="space-y-6">
+        <form id="login-form" class="space-y-6">
             <div>
                 <label for="username" class="block text-sm font-medium text-gray-300 mb-1">Username</label>
                 <input type="text" name="username" id="username" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2 text-white focus:ring-blue-500 focus:border-blue-500" required>
@@ -28,4 +28,36 @@
         </p>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('login-form');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        button.textContent = 'Signing in...';
+
+        try {
+            const response = await fetch("{{ url_for('main.login') }}", {
+                method: 'POST',
+                body: new URLSearchParams(formData)
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                window.location.href = data.redirect || "{{ url_for('main.index') }}";
+            } else {
+                showFlashMessage(data.message, data.status || 'error');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            showFlashMessage('An unexpected error occurred during login.', 'error');
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Sign in';
+        }
+    });
+});
+</script>
 {% endblock %}

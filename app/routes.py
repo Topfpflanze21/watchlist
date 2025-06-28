@@ -1,11 +1,8 @@
 # /app/routes.py
 import uuid
-import random
 import requests
-import calendar
 from datetime import datetime
-from collections import Counter, defaultdict
-from flask import (Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, Response)
+from flask import (Blueprint, render_template, request, redirect, url_for, current_app, jsonify, Response)
 from . import data_manager, tmdb_api, utils
 from flask_login import login_user, logout_user, current_user, login_required
 from .models import User
@@ -23,10 +20,9 @@ def login():
         user_data = data_manager.find_user_by_username(username)
         user_obj = User(user_data['id'], user_data['username'], user_data['password_hash']) if user_data else None
         if user_obj is None or not user_obj.check_password(password):
-            flash('Invalid username or password.', 'error')
-            return redirect(url_for('main.login'))
+            return jsonify({'status': 'error', 'message': 'Invalid username or password.'})
         login_user(user_obj, remember=remember)
-        return redirect(url_for('main.index'))
+        return jsonify({'status': 'success', 'redirect': url_for('main.index')})
     return render_template('login.html')
 
 
@@ -36,16 +32,14 @@ def register():
     if request.method == 'POST':
         username, password = request.form.get('username'), request.form.get('password')
         if data_manager.find_user_by_username(username):
-            flash('Username already exists. Please choose another.', 'error')
-            return redirect(url_for('main.register'))
+            return jsonify({'status': 'error', 'message': 'Username already exists. Please choose another.'})
         users_db = data_manager.get_users_db()
         new_user = User(id=users_db['next_id'], username=username, password_hash='')
         new_user.set_password(password)
         users_db['users'].append({'id': new_user.id, 'username': new_user.username, 'password_hash': new_user.password_hash})
         users_db['next_id'] += 1
         data_manager.save_users_db(users_db)
-        flash('Registration successful! Please log in.', 'success')
-        return redirect(url_for('main.login'))
+        return jsonify({'status': 'success', 'message': 'Registration successful! Please log in.', 'redirect': url_for('main.login')})
     return render_template('register.html')
 
 
@@ -59,7 +53,7 @@ def logout():
 @login_required
 def refresh_suggestions():
     data_manager.clear_suggestions_cache()
-    return redirect(url_for('main.index'))
+    return redirect(url_for('main.index', message='Suggestions have been refreshed!', category='success'))
 
 
 # --- Main Routes ---
@@ -108,8 +102,7 @@ def item_detail(item_type, item_id):
     details_func = tmdb_api.get_movie_details if item_type == 'movie' else tmdb_api.get_series_details
     details = details_func(item_id)
     if not details:
-        flash(f"Could not retrieve details for this {item_type}.", "error")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.index', message=f"Could not retrieve details for this {item_type}.", category="error"))
     if item_type == 'movie' and details.get('collection'):
         collection_details = tmdb_api.get_collection_details(details['collection']['id'])
         if not collection_details or len(collection_details.get('parts', [])) <= 1:
@@ -139,14 +132,17 @@ def item_detail_action(item_type, item_id):
         if not any(i['id'] == item_id for i in watchlist['planned'][internal]):
             watchlist['planned'][internal].append({"id": item_id})
             should_clear_cache = True
+            response_data['message'] = "Added to 'Plan to Watch'."
     elif action == 'remove_plan':
         watchlist['planned'][internal] = [i for i in watchlist['planned'][internal] if i.get('id') != item_id]
         should_clear_cache = True
+        response_data['message'] = "Removed from 'Plan to Watch'."
     elif action == 'watch' and item_type == 'movie':
         new_watch = {"id": item_id, "watch_id": str(uuid.uuid4()), "watched_on": request.form.get('watched_on') or None, "rating": int(r) if (r := request.form.get('rating')) else None}
         watchlist['watched']['movies'].append(new_watch)
         watchlist['planned']['movies'] = [i for i in watchlist['planned']['movies'] if i.get('id') != item_id]
         should_clear_cache = True
+        response_data['message'] = "Watch record added."
     elif action == 'delete_all':
         watchlist['planned'][internal] = [i for i in watchlist['planned'][internal] if i.get('id') != item_id]
         if item_type == 'movie':
@@ -156,11 +152,11 @@ def item_detail_action(item_type, item_id):
         should_clear_cache = True
         data_manager.save_watchlist(watchlist)
         data_manager.clear_suggestions_cache()
-        return redirect(origin)
+        return jsonify({'status': 'success', 'message': 'All records for this item have been deleted.', 'redirect': origin})
     elif action == 'delete_watch_instance' and item_type == 'movie':
         watch_id = request.form.get('watch_id')
         watchlist['watched']['movies'] = [w for w in watchlist['watched']['movies'] if w.get('watch_id') != watch_id]
-        response_data['watch_id'] = watch_id
+        response_data.update({'watch_id': watch_id, 'message': 'Watch record deleted.'})
         should_clear_cache = True
     elif action == 'edit_watch_instance' and item_type == 'movie':
         watch_id = request.form.get('watch_id')
@@ -168,7 +164,7 @@ def item_detail_action(item_type, item_id):
             if watch.get('watch_id') == watch_id:
                 watch['watched_on'] = request.form.get('watched_on') or None
                 watch['rating'] = int(r) if (r := request.form.get('rating')) and r.isdigit() else None
-                response_data['watch_id'] = watch_id
+                response_data.update({'watch_id': watch_id, 'message': 'Watch record updated.'})
                 should_clear_cache = True
                 break
     elif item_type == 'series':
@@ -178,11 +174,13 @@ def item_detail_action(item_type, item_id):
             watchlist['watched']['series'].setdefault(sid, []).append(new_watch)
             watchlist['planned']['series'] = [s for s in watchlist['planned']['series'] if s.get('id') != item_id]
             should_clear_cache = True
+            response_data['message'] = "New watch started for this series."
         elif action == 'delete_series_watch':
             if sid in watchlist['watched']['series'] and series_watch_id:
                 watchlist['watched']['series'][sid] = [w for w in watchlist['watched']['series'][sid] if w.get('series_watch_id') != series_watch_id]
                 if not watchlist['watched']['series'][sid]: del watchlist['watched']['series'][sid]
                 should_clear_cache = True
+                response_data['message'] = "Watch history for this session deleted."
         else:
             watch_through = next((w for w in watchlist['watched']['series'].get(sid, []) if w.get('series_watch_id') == series_watch_id), None)
             if watch_through:
@@ -190,12 +188,15 @@ def item_detail_action(item_type, item_id):
                     eid = request.form['episode_id']
                     if eid in watch_through['watched_episodes']:
                         del watch_through['watched_episodes'][eid]
+                        response_data['message'] = "Episode marked as unwatched."
                     else:
                         watch_through['watched_episodes'][eid] = {"watched_on": request.form.get('watched_on') or None}
+                        response_data['message'] = "Episode marked as watched."
                     should_clear_cache = True
                 elif action == 'rate_series':
                     if r_str := request.form.get('rating'):
                         watch_through['rating'] = int(r_str)
+                        response_data['message'] = "Series rating updated."
                         should_clear_cache = True
                 elif action in ['watch_season', 'unwatch_season', 'watch_all_episodes', 'unwatch_all_episodes']:
                     details = tmdb_api.get_series_details(item_id)
@@ -209,8 +210,10 @@ def item_detail_action(item_type, item_id):
                         date = request.form.get('watched_on') or None
                         if action.startswith('watch'):
                             for eid in episode_ids: watch_through['watched_episodes'].setdefault(eid, {"watched_on": date})
+                            response_data['message'] = "Episodes marked as watched."
                         else:
                             for eid in episode_ids: watch_through['watched_episodes'].pop(eid, None)
+                            response_data['message'] = "Episodes marked as unwatched."
                         should_clear_cache = True
     if should_clear_cache:
         data_manager.save_watchlist(watchlist)
@@ -250,7 +253,7 @@ def show_search_results():
                 elif media_type == 'tv' and item.get('poster_path'):
                     results.append({"id": item.get('id'), "title": item.get('name'), "year": item.get('first_air_date', '')[:4], "poster_url": f"{image_url}{item.get('poster_path')}", "type": "series"})
         except requests.RequestException as e:
-            flash(f"API Error: {e}", "error")
+            return redirect(url_for('main.index', message=f"API Error: {e}", category="error"))
     watchlist = data_manager.load_watchlist()
     p_m_ids, w_m_ids = {i['id'] for i in watchlist['planned']['movies']}, {i['id'] for i in watchlist['watched']['movies']}
     p_s_ids, w_s_ids = {int(id) for id in watchlist['planned']['series']}, {int(id) for id in watchlist['watched']['series']}
@@ -269,8 +272,7 @@ def show_search_results():
 def collection_details(collection_id):
     collection = tmdb_api.get_collection_details(collection_id)
     if not collection:
-        flash("Could not retrieve collection details.", "error")
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.index', message="Could not retrieve collection details.", category="error"))
     watchlist = data_manager.load_watchlist()
     p_m_ids, w_m_ids = {i['id'] for i in watchlist['planned']['movies']}, {i['id'] for i in watchlist['watched']['movies']}
     for item in collection.get('parts', []):
@@ -339,7 +341,11 @@ def change_username():
         return jsonify({'status': 'error', 'message': 'Username already exists.'})
 
     if data_manager.update_user(current_user.id, new_username=new_username):
-        return jsonify({'status': 'success', 'message': 'Username updated successfully!'})
+        # Update the username in the session
+        logout_user()
+        user_data = data_manager.find_user_by_id(current_user.id)
+        login_user(User(user_data['id'], user_data['username'], user_data['password_hash']), remember=True)
+        return jsonify({'status': 'success', 'message': 'Username updated successfully!', 'new_username': new_username})
     else:
         return jsonify({'status': 'error', 'message': 'Failed to update username.'})
 
@@ -383,46 +389,45 @@ def export_watchlist():
 @bp.route('/import_watchlist', methods=['POST'])
 @login_required
 def import_watchlist():
+    message, category = 'An unexpected error occurred.', 'error'
     if 'watchlist_file' not in request.files:
-        flash('No file part in the request.', 'error')
-        return redirect(url_for('main.profile'))
-    file = request.files['watchlist_file']
-    if file.filename == '':
-        flash('No file selected.', 'error')
-        return redirect(url_for('main.profile'))
-    if file and file.filename.endswith('.json'):
-        try:
-            content = file.read()
-            new_watchlist = json.loads(content)
-            if 'watched' not in new_watchlist or 'planned' not in new_watchlist or 'user_preferences' not in new_watchlist:
-                raise ValueError("Invalid watchlist format.")
-            data_manager.save_watchlist(new_watchlist)
-            utils.sync_cache_with_watchlist(current_app._get_current_object())
-            print("Import successful. Regenerating suggestions cache...")
-            watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
-            suggestions_cache = data_manager.load_suggestions_cache()
-            suggestions_cache['home_page'] = utils.generate_home_page_suggestions(watchlist, cache)
-            suggestions_cache['collections_page'] = utils.generate_collections_page_suggestions(watchlist, cache)
-            data_manager.save_suggestions_cache(suggestions_cache)
-            print("Suggestions cache regenerated.")
-            flash('Watchlist imported and all suggestions have been updated!', 'success')
-        except (json.JSONDecodeError, ValueError) as e:
-            flash(f'Error importing file: Invalid JSON or format. {e}', 'error')
-        except Exception as e:
-            flash(f'An unexpected error occurred: {e}', 'error')
+        message, category = 'No file part in the request.', 'error'
     else:
-        flash('Invalid file type. Please upload a .json file.', 'error')
-    return redirect(url_for('main.profile'))
+        file = request.files['watchlist_file']
+        if file.filename == '':
+            message, category = 'No file selected.', 'error'
+        elif file and file.filename.endswith('.json'):
+            try:
+                content = file.read()
+                new_watchlist = json.loads(content)
+                if 'watched' not in new_watchlist or 'planned' not in new_watchlist or 'user_preferences' not in new_watchlist:
+                    raise ValueError("Invalid watchlist format.")
+                data_manager.save_watchlist(new_watchlist)
+                utils.sync_cache_with_watchlist(current_app._get_current_object())
+                print("Import successful. Regenerating suggestions cache...")
+                watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
+                suggestions_cache = data_manager.load_suggestions_cache()
+                suggestions_cache['home_page'] = utils.generate_home_page_suggestions(watchlist, cache)
+                suggestions_cache['collections_page'] = utils.generate_collections_page_suggestions(watchlist, cache)
+                data_manager.save_suggestions_cache(suggestions_cache)
+                print("Suggestions cache regenerated.")
+                message, category = 'Watchlist imported and all suggestions have been updated!', 'success'
+            except (json.JSONDecodeError, ValueError) as e:
+                message, category = f'Error importing file: Invalid JSON or format. {e}', 'error'
+            except Exception as e:
+                message, category = f'An unexpected error occurred: {e}', 'error'
+        else:
+            message, category = 'Invalid file type. Please upload a .json file.', 'error'
+    return redirect(url_for('main.profile', message=message, category=category))
 
 
 @bp.route('/clear_watchlist', methods=['POST'])
 @login_required
 def clear_watchlist():
     if data_manager.clear_user_data():
-        flash('Your watchlist data has been successfully cleared.', 'success')
+        return jsonify({'status': 'success', 'message': 'Your watchlist data has been successfully cleared.'})
     else:
-        flash('There was an error clearing your watchlist data.', 'error')
-    return redirect(url_for('main.profile'))
+        return jsonify({'status': 'error', 'message': 'There was an error clearing your watchlist data.'})
 
 
 @bp.route('/delete_account', methods=['POST'])
@@ -431,7 +436,6 @@ def delete_account():
     user_to_delete = current_user
     logout_user()
     if data_manager.delete_user(user_to_delete.id):
-        flash(f'Account "{user_to_delete.username}" has been permanently deleted.', 'success')
+        return jsonify({'status': 'success', 'message': f'Account "{user_to_delete.username}" has been permanently deleted.', 'redirect': url_for('main.index')})
     else:
-        flash('There was an error deleting your account.', 'error')
-    return redirect(url_for('main.index'))
+        return jsonify({'status': 'error', 'message': 'There was an error deleting your account.'})
