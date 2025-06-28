@@ -1,15 +1,22 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="text-4xl font-bold mb-8 text-center">Your Watchlist Statistics</h1>
+<div class="flex items-center justify-between mb-8">
+    <a href="{{ url_for('main.profile') }}" class="inline-flex items-center text-gray-400 hover:text-white transition-colors group">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 h-5 w-5 transform group-hover:-translate-x-1 transition-transform"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back
+    </a>
+    <h1 class="text-4xl font-bold text-center">Your Watchlist Statistics</h1>
+    <div class="w-24"></div>
+</div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center mb-6">
     <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Total Movie Viewings</h2><p class="text-5xl font-bold text-blue-400 mt-2">{{ stats.total_movie_watches }}</p></div>
     <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">TV Episodes Watched</h2><p class="text-5xl font-bold text-purple-400 mt-2">{{ stats.total_episodes }}</p></div>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mb-12">
-    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Movie Watch Time</h2><p class="text-4xl font-bold text-blue-400 mt-2">{{ stats.movie_watch_time_minutes|format_runtime }}</p></div>
-    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Series Watch Time</h2><p class="text-4xl font-bold text-purple-400 mt-2">{{ stats.series_watch_time_minutes|format_runtime }}</p></div>
-    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Total Watch Time</h2><p class="text-4xl font-bold text-yellow-400 mt-2">{{ stats.total_watch_time_minutes|format_runtime }}</p></div>
+    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Movie Watch Time</h2><p class="text-4xl font-bold text-blue-400 mt-2">{% if stats.movie_watch_time_minutes %}{{ stats.movie_watch_time_minutes|format_runtime }}{% else %}0{% endif %}</p></div>
+    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Series Watch Time</h2><p class="text-4xl font-bold text-purple-400 mt-2">{% if stats.series_watch_time_minutes %}{{ stats.series_watch_time_minutes|format_runtime }}{% else %}0{% endif %}</p></div>
+    <div class="card p-6 rounded-lg"><h2 class="text-xl font-semibold text-gray-300">Total Watch Time</h2><p class="text-4xl font-bold text-yellow-400 mt-2">{% if stats.total_watch_time_minutes %}{{ stats.total_watch_time_minutes|format_runtime }}{% else %}0{% endif %}</p></div>
 </div>
 
 <h2 class="text-3xl font-bold mb-6 text-white border-b-2 border-gray-700 pb-2">Viewing Habits</h2>

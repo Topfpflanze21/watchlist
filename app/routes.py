@@ -13,6 +13,7 @@ import json
 
 bp = Blueprint('main', __name__)
 
+
 # --- Authentication Routes ---
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -27,6 +28,7 @@ def login():
         login_user(user_obj, remember=remember)
         return redirect(url_for('main.index'))
     return render_template('login.html')
+
 
 @bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -46,16 +48,19 @@ def register():
         return redirect(url_for('main.login'))
     return render_template('register.html')
 
+
 @bp.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
+
 
 @bp.route('/refresh_suggestions')
 @login_required
 def refresh_suggestions():
     data_manager.clear_suggestions_cache()
     return redirect(url_for('main.index'))
+
 
 # --- Main Routes ---
 @bp.route('/')
@@ -69,14 +74,17 @@ def index():
     cached_data = suggestions_cache['home_page']
     return render_template('index.html', **cached_data)
 
+
 @bp.route('/movies')
 def movies():
     watchlist, cache = data_manager.load_watchlist(), data_manager.load_cache()
     watches = {}
     for watch in watchlist['watched']['movies']: watches.setdefault(watch['id'], []).append(watch)
-    watched_items = sorted([({**cache['movies'][str(id)], **max(w, key=lambda x: x.get('watched_on') or '0001-01-01'), 'watch_count': len(w), 'type': 'movie'}) for id, w in watches.items() if str(id) in cache['movies']], key=lambda x: x.get('watched_on') or '0001-01-01', reverse=True)
+    watched_items = sorted([({**cache['movies'][str(id)], **max(w, key=lambda x: x.get('watched_on') or '0001-01-01'), 'watch_count': len(w), 'type': 'movie'}) for id, w in watches.items() if str(id) in cache['movies']],
+                           key=lambda x: x.get('watched_on') or '0001-01-01', reverse=True)
     planned_items = [{**cache['movies'][str(m['id'])], **m, 'type': 'movie'} for m in watchlist['planned']['movies'] if str(m['id']) in cache['movies']]
     return render_template('items_list.html', item_type='movies', watched_items=watched_items, planned_items=planned_items)
+
 
 @bp.route('/series')
 def series():
@@ -93,6 +101,7 @@ def series():
     watched_items.sort(key=lambda x: x.get('last_watched_on') or '0001-01-01', reverse=True)
     planned_items = [{**cache['series'][str(s['id'])], **s, 'type': 'series'} for s in watchlist['planned']['series'] if str(s['id']) in cache['series']]
     return render_template('items_list.html', item_type='series', watched_items=watched_items, planned_items=planned_items)
+
 
 @bp.route('/item/<item_type>/<int:item_id>')
 def item_detail(item_type, item_id):
@@ -117,6 +126,7 @@ def item_detail(item_type, item_id):
         is_planned = any(i.get('id') == item_id for i in watchlist['planned']['series'])
         return render_template('details.html', item=item_to_show, is_planned=is_planned, is_watched=bool(watch_histories), today=today, origin=origin, watch_histories=watch_histories)
 
+
 @bp.route('/item/<item_type>/<int:item_id>/action', methods=['POST'])
 @login_required
 def item_detail_action(item_type, item_id):
@@ -139,8 +149,10 @@ def item_detail_action(item_type, item_id):
         should_clear_cache = True
     elif action == 'delete_all':
         watchlist['planned'][internal] = [i for i in watchlist['planned'][internal] if i.get('id') != item_id]
-        if item_type == 'movie': watchlist['watched']['movies'] = [i for i in watchlist['watched']['movies'] if i.get('id') != item_id]
-        else: watchlist['watched']['series'].pop(sid, None)
+        if item_type == 'movie':
+            watchlist['watched']['movies'] = [i for i in watchlist['watched']['movies'] if i.get('id') != item_id]
+        else:
+            watchlist['watched']['series'].pop(sid, None)
         should_clear_cache = True
         data_manager.save_watchlist(watchlist)
         data_manager.clear_suggestions_cache()
@@ -176,8 +188,10 @@ def item_detail_action(item_type, item_id):
             if watch_through:
                 if action == 'toggle_episode':
                     eid = request.form['episode_id']
-                    if eid in watch_through['watched_episodes']: del watch_through['watched_episodes'][eid]
-                    else: watch_through['watched_episodes'][eid] = {"watched_on": request.form.get('watched_on') or None}
+                    if eid in watch_through['watched_episodes']:
+                        del watch_through['watched_episodes'][eid]
+                    else:
+                        watch_through['watched_episodes'][eid] = {"watched_on": request.form.get('watched_on') or None}
                     should_clear_cache = True
                 elif action == 'rate_series':
                     if r_str := request.form.get('rating'):
@@ -190,7 +204,8 @@ def item_detail_action(item_type, item_id):
                         if action in ['watch_season', 'unwatch_season']:
                             season_num = int(request.form['season_number'])
                             episode_ids = [ep['id'] for s in details.get('seasons', []) if s.get('season_number') == season_num for ep in s.get('episodes', [])]
-                        else: episode_ids = [ep['id'] for s in details.get('seasons', []) for ep in s.get('episodes', [])]
+                        else:
+                            episode_ids = [ep['id'] for s in details.get('seasons', []) for ep in s.get('episodes', [])]
                         date = request.form.get('watched_on') or None
                         if action.startswith('watch'):
                             for eid in episode_ids: watch_through['watched_episodes'].setdefault(eid, {"watched_on": date})
@@ -213,10 +228,12 @@ def item_detail_action(item_type, item_id):
             response_data['series_watch_id'] = request.form.get('series_watch_id')
     return jsonify(response_data)
 
+
 @bp.route('/search', methods=['POST'])
 def search():
     query = request.form.get('query', '').strip()
     return redirect(url_for('main.show_search_results', q=query) if query else url_for('main.index'))
+
 
 @bp.route('/search_results')
 def show_search_results():
@@ -232,16 +249,21 @@ def show_search_results():
                     results.append({"id": item.get('id'), "title": item.get('title'), "year": item.get('release_date', '')[:4], "poster_url": f"{image_url}{item.get('poster_path')}", "type": "movie"})
                 elif media_type == 'tv' and item.get('poster_path'):
                     results.append({"id": item.get('id'), "title": item.get('name'), "year": item.get('first_air_date', '')[:4], "poster_url": f"{image_url}{item.get('poster_path')}", "type": "series"})
-        except requests.RequestException as e: flash(f"API Error: {e}", "error")
+        except requests.RequestException as e:
+            flash(f"API Error: {e}", "error")
     watchlist = data_manager.load_watchlist()
     p_m_ids, w_m_ids = {i['id'] for i in watchlist['planned']['movies']}, {i['id'] for i in watchlist['watched']['movies']}
-    p_s_ids, w_s_ids = {i['id'] for i in watchlist['planned']['series']}, {int(id) for id in watchlist['watched']['series']}
+    p_s_ids, w_s_ids = {int(id) for id in watchlist['planned']['series']}, {int(id) for id in watchlist['watched']['series']}
     for item in results:
         is_movie, item_id = (item['type'] == 'movie'), item['id']
-        if (is_movie and item_id in w_m_ids) or (not is_movie and item_id in w_s_ids): item['status'] = 'watched'
-        elif (is_movie and item_id in p_m_ids) or (not is_movie and item_id in p_s_ids): item['status'] = 'planned'
-        else: item['status'] = None
+        if (is_movie and item_id in w_m_ids) or (not is_movie and item_id in w_s_ids):
+            item['status'] = 'watched'
+        elif (is_movie and item_id in p_m_ids) or (not is_movie and item_id in p_s_ids):
+            item['status'] = 'planned'
+        else:
+            item['status'] = None
     return render_template('search_results.html', query=query, results=results)
+
 
 @bp.route('/collection/<int:collection_id>')
 def collection_details(collection_id):
@@ -252,10 +274,14 @@ def collection_details(collection_id):
     watchlist = data_manager.load_watchlist()
     p_m_ids, w_m_ids = {i['id'] for i in watchlist['planned']['movies']}, {i['id'] for i in watchlist['watched']['movies']}
     for item in collection.get('parts', []):
-        if item['id'] in w_m_ids: item['status'] = 'watched'
-        elif item['id'] in p_m_ids: item['status'] = 'planned'
-        else: item['status'] = None
+        if item['id'] in w_m_ids:
+            item['status'] = 'watched'
+        elif item['id'] in p_m_ids:
+            item['status'] = 'planned'
+        else:
+            item['status'] = None
     return render_template('collection_details.html', collection=collection)
+
 
 @bp.route('/collections')
 def collections():
@@ -268,6 +294,7 @@ def collections():
     cached_data = suggestions_cache['collections_page']
     return render_template('collections_list.html', **cached_data)
 
+
 # --- User Profile, Settings, Stats ---
 @bp.route('/stats')
 @login_required
@@ -276,69 +303,82 @@ def stats():
     stats_data = utils.generate_stats_page_data(watchlist, cache)
     return render_template('stats.html', stats=stats_data)
 
+
 @bp.route('/profile')
 @login_required
 def profile():
     return render_template('profile.html', username=current_user.username)
 
 
-@bp.route('/settings', methods=['GET', 'POST'])
+@bp.route('/settings', methods=['GET'])
 @login_required
 def settings():
     watchlist = data_manager.load_watchlist()
-    if request.method == 'POST':
-        settings_changed = False
-
-        # --- Providers ---
-        current_providers = set(watchlist.get('user_preferences', {}).get('providers', []))
-        new_providers = {int(pid) for pid in request.form.getlist('provider_ids')}
-        if current_providers != new_providers:
-            watchlist['user_preferences']['providers'] = list(new_providers)
-            settings_changed = True
-
-        # --- Username ---
-        new_username = request.form.get('username').strip()
-        if new_username and new_username != current_user.username:
-            if data_manager.find_user_by_username(new_username):
-                flash('Username already exists.', 'error')
-                return redirect(url_for('main.settings'))
-            else:
-                data_manager.update_user(current_user.id, new_username=new_username)
-                flash('Username updated successfully!', 'success')
-                settings_changed = True
-
-        # --- Password ---
-        new_password = request.form.get('new_password')
-        if new_password:
-            current_password = request.form.get('current_password')
-            if not current_password or not current_user.check_password(current_password):
-                flash('Your current password was incorrect.', 'error')
-                return redirect(url_for('main.settings'))
-            if new_password != request.form.get('password_confirm'):
-                flash('New passwords do not match.', 'error')
-                return redirect(url_for('main.settings'))
-
-            data_manager.update_user(current_user.id, new_password=new_password)
-            flash('Password updated successfully!', 'success')
-            settings_changed = True
-
-        # --- Save and Redirect ---
-        if settings_changed:
-            data_manager.save_watchlist(watchlist)
-            data_manager.clear_suggestions_cache()
-            flash('Your settings have been saved!', 'success')
-
-        return redirect(url_for('main.settings'))
-
     providers = tmdb_api.get_available_providers(region='AT')
     saved_provider_ids = set(watchlist.get('user_preferences', {}).get('providers', []))
     return render_template('settings.html', providers=providers, saved_provider_ids=saved_provider_ids)
+
+@bp.route('/check_username', methods=['POST'])
+@login_required
+def check_username():
+    username = request.form.get('username', '').strip()
+    if not username:
+        return jsonify({'available': False})
+    if username.lower() == current_user.username.lower():
+        return jsonify({'available': True}) # Same as current user
+    user = data_manager.find_user_by_username(username)
+    return jsonify({'available': user is None})
+
+@bp.route('/change_username', methods=['POST'])
+@login_required
+def change_username():
+    new_username = request.form.get('username', '').strip()
+    if not new_username or new_username.lower() == current_user.username.lower():
+        return jsonify({'status': 'error', 'message': 'Please enter a new username.'})
+    if data_manager.find_user_by_username(new_username):
+        return jsonify({'status': 'error', 'message': 'Username already exists.'})
+
+    if data_manager.update_user(current_user.id, new_username=new_username):
+        return jsonify({'status': 'success', 'message': 'Username updated successfully!'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Failed to update username.'})
+
+@bp.route('/change_password', methods=['POST'])
+@login_required
+def change_password():
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    password_confirm = request.form.get('password_confirm')
+
+    if not current_password or not new_password or not password_confirm:
+        return jsonify({'status': 'error', 'message': 'Please fill in all password fields.'})
+    if not current_user.check_password(current_password):
+        return jsonify({'status': 'error', 'message': 'Your current password was incorrect.'})
+    if new_password != password_confirm:
+        return jsonify({'status': 'error', 'message': 'New passwords do not match.'})
+
+    if data_manager.update_user(current_user.id, new_password=new_password):
+        return jsonify({'status': 'success', 'message': 'Password updated successfully!'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Failed to update password.'})
+
+@bp.route('/save_providers', methods=['POST'])
+@login_required
+def save_providers():
+    watchlist = data_manager.load_watchlist()
+    new_providers = {int(pid) for pid in request.form.getlist('provider_ids[]')}
+    watchlist.setdefault('user_preferences', {})['providers'] = list(new_providers)
+    data_manager.save_watchlist(watchlist)
+    data_manager.clear_suggestions_cache()
+    return jsonify({'status': 'success', 'message': 'Watch providers updated!', 'count': len(new_providers)})
+
 
 @bp.route('/export_watchlist')
 @login_required
 def export_watchlist():
     watchlist = data_manager.load_watchlist()
     return Response(json.dumps(watchlist, indent=4), mimetype='application/json', headers={'Content-Disposition': 'attachment;filename=watchlist.json'})
+
 
 @bp.route('/import_watchlist', methods=['POST'])
 @login_required
@@ -355,7 +395,7 @@ def import_watchlist():
             content = file.read()
             new_watchlist = json.loads(content)
             if 'watched' not in new_watchlist or 'planned' not in new_watchlist or 'user_preferences' not in new_watchlist:
-                 raise ValueError("Invalid watchlist format.")
+                raise ValueError("Invalid watchlist format.")
             data_manager.save_watchlist(new_watchlist)
             utils.sync_cache_with_watchlist(current_app._get_current_object())
             print("Import successful. Regenerating suggestions cache...")
@@ -374,6 +414,7 @@ def import_watchlist():
         flash('Invalid file type. Please upload a .json file.', 'error')
     return redirect(url_for('main.profile'))
 
+
 @bp.route('/clear_watchlist', methods=['POST'])
 @login_required
 def clear_watchlist():
@@ -382,6 +423,7 @@ def clear_watchlist():
     else:
         flash('There was an error clearing your watchlist data.', 'error')
     return redirect(url_for('main.profile'))
+
 
 @bp.route('/delete_account', methods=['POST'])
 @login_required

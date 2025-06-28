@@ -2,61 +2,88 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-4xl mx-auto">
-    <h1 class="text-4xl font-bold mb-8 text-center">Settings</h1>
+    <div class="flex items-center justify-between mb-8">
+        <a href="{{ url_for('main.profile') }}" class="inline-flex items-center text-gray-400 hover:text-white transition-colors group">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 h-5 w-5 transform group-hover:-translate-x-1 transition-transform"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Back
+        </a>
+        <h1 class="text-4xl font-bold text-center">Settings</h1>
+        <div class="w-24"></div> </div>
+
+    <div id="flash-container" class="fixed bottom-8 right-8 z-[1000] w-full max-w-xs"></div>
 
     <div class="card p-6 md:p-8">
-        <form method="POST" action="{{ url_for('main.settings') }}">
-            <fieldset>
-                <legend class="text-2xl font-bold text-white border-b-2 border-gray-700 pb-3 mb-6 w-full">Account Information</legend>
-                <div class="space-y-6">
-                    <div>
-                        <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
-                        <input type="text" name="username" id="username" value="{{ current_user.username }}" class="w-full max-w-sm bg-gray-700 border-gray-600 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:border-blue-500" required>
-                    </div>
+        <fieldset>
+            <legend class="text-2xl font-bold text-white border-b-2 border-gray-700 pb-3 mb-6 w-full">Account Information</legend>
 
-                    <div class="space-y-4 pt-4 border-t border-gray-700/50">
-                        <h3 class="text-lg font-semibold text-gray-200">Change Password</h3>
-                        <p class="text-sm text-gray-400 max-w-xl">To change your password, enter your current password below, followed by a new password. Leave these fields blank to keep your current password.</p>
-                        <div class="space-y-4 max-w-sm mt-4">
-                             <div>
-                                <label for="current_password" class="block text-sm font-medium text-gray-300 mb-2">Current Password</label>
-                                <input type="password" name="current_password" id="current_password" placeholder="••••••••" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label for="password" class="block text-sm font-medium text-gray-300 mb-2">New Password</label>
-                                <input type="password" name="password" id="password" placeholder="Enter new password" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:border-blue-500">
-                            </div>
-                            <div>
-                                <label for="password_confirm" class="block text-sm font-medium text-gray-300 mb-2">Confirm New Password</label>
-                                <input type="password" name="password_confirm" id="password_confirm" placeholder="Confirm new password" class="w-full bg-gray-700 border-gray-600 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:border-blue-500">
-                            </div>
+            <form id="username-form" class="space-y-4">
+                <div class="max-w-sm">
+                    <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                    <input type="text" name="username" id="username" value="{{ current_user.username }}" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-2.5 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+                    <div id="username-feedback" class="text-sm mt-2 h-5"></div>
+                    <button type="submit" id="change-username-btn" class="btn !px-6 !py-2.5 mt-2">Change Username</button>
+                </div>
+            </form>
+
+            <form id="password-form" class="space-y-4 pt-6 border-t border-gray-700/50 mt-6">
+                <h3 class="text-lg font-semibold text-gray-200">Change Password</h3>
+                <p class="text-sm text-gray-400 max-w-xl">To change your password, enter your current password below, followed by a new password. Leave these fields blank to keep your current password.</p>
+                <div class="space-y-4 max-w-sm mt-4">
+                     <div>
+                        <label for="current_password" class="block text-sm font-medium text-gray-300 mb-2">Current Password</label>
+                        <div class="relative">
+                            <input type="password" name="current_password" id="current_password" placeholder="••••••••" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-2.5 pr-10 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            <button type="button" class="password-toggle absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-white">
+                                <svg class="eye-icon h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                <svg class="eye-off-icon h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243l-4.243-4.243" /></svg>
+                            </button>
                         </div>
                     </div>
+                    <div>
+                        <label for="new_password" class="block text-sm font-medium text-gray-300 mb-2">New Password</label>
+                        <div class="relative">
+                            <input type="password" name="new_password" id="new_password" placeholder="Enter new password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-2.5 pr-10 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            <button type="button" class="password-toggle absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-white">
+                                <svg class="eye-icon h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                <svg class="eye-off-icon h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243l-4.243-4.243" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="password_confirm" class="block text-sm font-medium text-gray-300 mb-2">Confirm New Password</label>
+                         <div class="relative">
+                            <input type="password" name="password_confirm" id="password_confirm" placeholder="Confirm new password" class="w-full bg-gray-700 border-2 border-gray-600 rounded-lg p-2.5 pr-10 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            <button type="button" class="password-toggle absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-white">
+                                <svg class="eye-icon h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                <svg class="eye-off-icon h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243l-4.243-4.243" /></svg>
+                            </button>
+                        </div>
+                        <div id="password-feedback" class="text-sm mt-2 h-5"></div>
+                    </div>
                 </div>
-            </fieldset>
+                <div class="text-left pt-2">
+                    <button type="submit" id="change-password-btn" class="btn !px-6 !py-2.5">Change Password</button>
+                </div>
+            </form>
+        </fieldset>
 
-            <fieldset class="mt-10">
-                 <legend class="text-2xl font-bold text-white border-b-2 border-gray-700 pb-3 mb-6 w-full">My Watch Providers</legend>
-                 <div class="flex flex-wrap items-center justify-between gap-4">
-                     <div>
-                        <p class="text-gray-300">You have <strong id="provider-count" class="text-white">{{ saved_provider_ids|length }}</strong> provider(s) selected.</p>
-                        <p class="text-gray-400 text-sm mt-1">This will be used in the future to help tailor suggestions. (Region: AT)</p>
-                     </div>
-                     <button type="button" id="open-providers-modal" class="btn btn-secondary">Manage Providers</button>
+        <fieldset class="mt-10">
+             <legend class="text-2xl font-bold text-white border-b-2 border-gray-700 pb-3 mb-6 w-full">My Watch Providers</legend>
+             <div class="flex flex-wrap items-center justify-between gap-4">
+                 <div>
+                    <p class="text-gray-300">You have <strong id="provider-count" class="text-white">{{ saved_provider_ids|length }}</strong> provider(s) selected.</p>
+                    <p class="text-gray-400 text-sm mt-1">This will be used in the future to help tailor suggestions. (Region: AT)</p>
                  </div>
-                 <div class="hidden">
-                    {% if providers %}
-                        {% for provider in providers %}
-                        <input type="checkbox" name="provider_ids" value="{{ provider.id }}" id="provider-{{ provider.id }}" class="provider-checkbox-input" {% if provider.id in saved_provider_ids %}checked{% endif %}>
-                        {% endfor %}
-                    {% endif %}
-                 </div>
-            </fieldset>
-
-            <div class="mt-10 pt-6 border-t border-gray-700 text-right">
-                <button type="submit" class="btn !px-8 !py-3">Save All Changes</button>
-            </div>
-        </form>
+                 <button type="button" id="open-providers-modal" class="btn">Manage Providers</button>
+             </div>
+             <div class="hidden">
+                {% if providers %}
+                    {% for provider in providers %}
+                    <input type="checkbox" name="provider_ids" value="{{ provider.id }}" id="provider-{{ provider.id }}" class="provider-checkbox-input" {% if provider.id in saved_provider_ids %}checked{% endif %}>
+                    {% endfor %}
+                {% endif %}
+             </div>
+        </fieldset>
     </div>
 </div>
 
@@ -91,20 +118,196 @@
             {% endif %}
         </div>
          <div class="p-4 border-t border-gray-700 flex-shrink-0 text-right">
-            <button id="done-providers-modal" class="btn">Done</button>
+            <button id="save-providers-modal" class="btn">Save</button>
         </div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Modal Handling ---
+    // --- General Functions ---
+    const flashContainer = document.getElementById('flash-container');
+    const MAX_MESSAGES = 5;
+
+    function showFlashMessage(message, category = 'success', duration = 15000) {
+        // Remove oldest message if the container is full
+        while (flashContainer.children.length >= MAX_MESSAGES) {
+            flashContainer.firstChild.remove();
+        }
+
+        const alertDiv = document.createElement('div');
+        // Add mb-2 for spacing between messages
+        alertDiv.className = `alert alert-${category} mb-2 transition-all duration-300 ease-in-out transform translate-x-full opacity-0 flex items-center justify-between`;
+
+        const messageSpan = document.createElement('span');
+        messageSpan.textContent = message;
+        alertDiv.appendChild(messageSpan);
+
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '&times;';
+        closeButton.className = 'ml-4 font-bold text-2xl leading-none p-1 w-8 h-8 flex items-center justify-center hover:bg-black/20 rounded-full transition-colors';
+        closeButton.setAttribute('aria-label', 'Close');
+
+        let timeoutId;
+
+        const closeAlert = () => {
+            clearTimeout(timeoutId); // Prevent auto-close if manually closed
+            alertDiv.classList.add('opacity-0', 'translate-x-full');
+            alertDiv.addEventListener('transitionend', () => {
+                alertDiv.remove();
+            }, { once: true });
+        };
+
+        closeButton.addEventListener('click', closeAlert);
+        alertDiv.appendChild(closeButton);
+        flashContainer.appendChild(alertDiv);
+
+        // Animate in
+        setTimeout(() => {
+            alertDiv.classList.remove('translate-x-full', 'opacity-0');
+        }, 10);
+
+        // Set a timer to automatically close the alert
+        timeoutId = setTimeout(closeAlert, duration);
+    }
+
+
+    // --- Username Verification & Update ---
+    const usernameInput = document.getElementById('username');
+    const usernameFeedback = document.getElementById('username-feedback');
+    const usernameForm = document.getElementById('username-form');
+    let usernameTimeout;
+
+    const resetUsernameStyles = () => {
+        usernameFeedback.textContent = '';
+        usernameInput.classList.remove('border-red-500', 'bg-red-900/30');
+        usernameInput.classList.add('border-gray-600', 'bg-gray-700');
+    };
+
+    usernameInput.addEventListener('input', () => {
+        clearTimeout(usernameTimeout);
+        usernameTimeout = setTimeout(async () => {
+            const username = usernameInput.value.trim();
+            if (username.toLowerCase() === '{{ current_user.username.lower() }}' || !username) {
+                resetUsernameStyles();
+                return;
+            }
+            const response = await fetch("{{ url_for('main.check_username') }}", {
+                method: 'POST',
+                body: new URLSearchParams({ 'username': username })
+            });
+            const data = await response.json();
+
+            if (data.available) {
+                resetUsernameStyles();
+                usernameFeedback.textContent = 'Username is available!';
+                usernameFeedback.className = 'text-sm mt-2 h-5 text-green-400';
+            } else {
+                usernameFeedback.textContent = 'Username already taken.';
+                usernameFeedback.className = 'text-sm mt-2 h-5 text-red-400';
+                usernameInput.classList.add('border-red-500', 'bg-red-900/30');
+                usernameInput.classList.remove('border-gray-600', 'bg-gray-700');
+            }
+        }, 500);
+    });
+
+    usernameForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(usernameForm);
+        const response = await fetch("{{ url_for('main.change_username') }}", {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        showFlashMessage(data.message, data.status);
+        if (data.status === 'success') {
+            resetUsernameStyles();
+        }
+    });
+
+    // --- Password Verification & Update ---
+    const passwordForm = document.getElementById('password-form');
+    const newPasswordInput = document.getElementById('new_password');
+    const confirmPasswordInput = document.getElementById('password_confirm');
+    const passwordFeedback = document.getElementById('password-feedback');
+
+    function setPasswordStyles(elements, state) {
+        elements.forEach(el => {
+            el.classList.remove('border-red-500', 'bg-red-900/30', 'border-gray-600', 'bg-gray-700');
+            if (state === 'error') {
+                el.classList.add('border-red-500', 'bg-red-900/30');
+            } else {
+                el.classList.add('border-gray-600', 'bg-gray-700');
+            }
+        });
+    }
+
+    function checkPasswords() {
+        const newPass = newPasswordInput.value;
+        const confirmPass = confirmPasswordInput.value;
+        const fields = [newPasswordInput, confirmPasswordInput];
+
+        if (newPass && confirmPass) {
+            if (newPass === confirmPass) {
+                passwordFeedback.textContent = 'Passwords match.';
+                passwordFeedback.className = 'text-sm mt-2 h-5 text-green-400';
+                setPasswordStyles(fields, 'default');
+            } else {
+                passwordFeedback.textContent = 'Passwords do not match.';
+                passwordFeedback.className = 'text-sm mt-2 h-5 text-red-400';
+                setPasswordStyles(fields, 'error');
+            }
+        } else {
+            passwordFeedback.textContent = '';
+            setPasswordStyles(fields, 'default');
+        }
+    }
+
+    newPasswordInput.addEventListener('input', checkPasswords);
+    confirmPasswordInput.addEventListener('input', checkPasswords);
+
+    passwordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(passwordForm);
+        const response = await fetch("{{ url_for('main.change_password') }}", {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        showFlashMessage(data.message, data.status);
+        if (data.status === 'success') {
+            passwordForm.reset();
+            passwordFeedback.textContent = '';
+            setPasswordStyles([newPasswordInput, confirmPasswordInput], 'default');
+        }
+    });
+
+    // --- Password Visibility Toggle ---
+    document.querySelectorAll('.password-toggle').forEach(button => {
+        button.addEventListener('click', () => {
+            const input = button.closest('.relative').querySelector('input');
+            const eyeIcon = button.querySelector('.eye-icon');
+            const eyeOffIcon = button.querySelector('.eye-off-icon');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                eyeIcon.classList.add('hidden');
+                eyeOffIcon.classList.remove('hidden');
+            } else {
+                input.type = 'password';
+                eyeIcon.classList.remove('hidden');
+                eyeOffIcon.classList.add('hidden');
+            }
+        });
+    });
+
+    // --- Providers Modal ---
     const openBtn = document.getElementById('open-providers-modal');
     const modal = document.getElementById('providers-modal');
     if (!modal) return;
 
     const closeBtn = document.getElementById('close-providers-modal');
-    const doneBtn = document.getElementById('done-providers-modal');
+    const saveBtn = document.getElementById('save-providers-modal');
     const searchInput = document.getElementById('provider-search');
     const providerCountSpan = document.getElementById('provider-count');
     const noResultsMsg = document.getElementById('no-providers-found');
@@ -116,7 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     openBtn.addEventListener('click', openModal);
     closeBtn.addEventListener('click', closeModal);
-    doneBtn.addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal();
     });
@@ -124,11 +326,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
     });
 
-    // --- Provider Selection and Styling ---
-    const updateProviderCount = () => {
-        const count = document.querySelectorAll('.provider-checkbox-input:checked').length;
-        providerCountSpan.textContent = count;
-    };
+    saveBtn.addEventListener('click', async () => {
+        const formData = new FormData();
+        const selectedProviders = document.querySelectorAll('.provider-checkbox-input:checked');
+        selectedProviders.forEach(cb => formData.append('provider_ids[]', cb.value));
+
+        const response = await fetch("{{ url_for('main.save_providers') }}", {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        showFlashMessage(data.message, data.status);
+        if (data.status === 'success') {
+            providerCountSpan.textContent = data.count;
+        }
+        closeModal();
+    });
 
     realCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', () => {
@@ -140,11 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
             label.classList.toggle('border-blue-500', isChecked);
             label.classList.toggle('bg-gray-700/50', !isChecked);
             label.classList.toggle('border-transparent', !isChecked);
-            updateProviderCount();
         });
     });
 
-    // --- Search Functionality ---
     searchInput.addEventListener('input', () => {
         const query = searchInput.value.toLowerCase().trim();
         let visibleCount = 0;
